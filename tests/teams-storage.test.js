@@ -101,7 +101,7 @@ test('settings.team keeps the venue id, the last venue code made and the staff l
   assert.deepEqual(real((x) => (x.settings.team = { venueId: ID })).settings.team, { venueId: ID });
 });
 
-test('the Team tab can be the last tab; unknown tabs still fall back to Tonight', () => {
+test('the Teams tab is a valid last tab; unknown tabs still fall back to Tonight', () => {
   assert.equal(real((x) => (x.settings.lastTab = 'team')).settings.lastTab, 'team');
   assert.equal(real((x) => (x.settings.lastTab = 'managers')).settings.lastTab, 'tonight');
 });

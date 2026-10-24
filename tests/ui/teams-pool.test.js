@@ -1,4 +1,4 @@
-// Team tab, tip pool: the manager's night, the four split methods, the tip sheet (totals equal the pool), print, share.
+// Teams tab, tip pool: the manager's night, the four split methods, the tip sheet (totals equal the pool), print, share.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, realState } from './harness.js';
@@ -263,16 +263,17 @@ test('a sheet that is too big to share says to split the staff into two sheets',
     fill(page, '#pool-date', yesterday);
     fill(page, '#pool-cc', '99999.99');
     fill(page, '#pool-cash', '88888.88');
-    for (let i = 0; i < 60; i++)
-      person(page, i, 'Person number ' + (i + 1) + ' ab', '', '7:' + String(10 + (i % 50)));
+    // 50 people (the most a sheet holds) with long accented names: over the 2,500 bytes a link holds
+    for (let i = 0; i < 50; i++)
+      person(page, i, ('Zoë ' + (i + 1) + ' ').padEnd(24, 'é'), '', '7:' + String(10 + (i % 50)));
     await later();
     assert.ok(page.$('#pool-result table'), 'the sheet itself works out');
-    assert.equal(page.$$('#pool-result tbody tr').length, 60);
+    assert.equal(page.$$('#pool-result tbody tr').length, 50);
     page.click(page.$('#pool-share-btn'));
     assert.match(page.text(page.$('#pool-share-toobig')), /Split the staff into two sheets/);
     assert.equal(page.$('#sheet-link'), null);
     page.click(page.$('#pool-add-person'));
-    assert.match(page.text(page.$('.toast')), /up to 60 people/);
+    assert.match(page.text(page.$('.toast')), /up to 50 people/);
   } finally {
     await page.close();
   }

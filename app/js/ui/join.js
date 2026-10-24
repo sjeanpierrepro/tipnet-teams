@@ -6,7 +6,7 @@ import { businessDate, cutoffFromSettings, dateProblem } from '../inputs.js';
 import { decodeVenue, BAD_LINK_MSG } from '../venue.js';
 import { decodeSheet, BAD_SHEET_MSG, METHOD_TEXT } from '../sheet.js';
 import { hoursLabel } from '../pool.js';
-import { isSetUp, isWorkplaceSetUp, canAddWorkplace, findWorkplace } from '../storage.js';
+import { isSetUp, isWorkplaceSetUp, canAddWorkplace, findWorkplace, activeWorkplace } from '../storage.js';
 import { isUnlocked } from '../billing.js';
 import { el, clear, toast, arm, bus, getState, money, fmtDate } from './common.js';
 import { startVenueSetup, addVenueEstablishment, updateFromVenue, limitLine, joinBlocked } from './setup.js';
@@ -133,7 +133,9 @@ function joinScreen(root, v) {
       el(
         'p',
         { class: 'note' },
-        'TipNet fills these in for you. You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.',
+        'TipNet fills these in for ' +
+          (activeWorkplace(S) || { name: 'your establishment' }).name +
+          '. You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.',
       ),
       el('div', { class: 'cluster' }, go),
     ];

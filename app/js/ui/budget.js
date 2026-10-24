@@ -401,7 +401,8 @@ function creditBlock(S, links) {
   const line = el('p', { class: 'hint', id: 'credit-line' });
   const paint = () => {
     const now = creditVenue(S);
-    line.textContent = now.name + ' gets a small credit on its TipNet Teams bill when you subscribe.';
+    line.textContent =
+      now.name + ' gets a small credit (a refund on its TipNet Teams payment) when you subscribe.';
     for (const [plan, a] of links) a.setAttribute('href', budgetCheckoutHref(plan, S));
   };
   paint();

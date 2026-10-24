@@ -128,7 +128,7 @@ Anyone with the sheet link sees everyone's share, so only open it from your mana
 
 ## Budget and your venue's credit (your choice)
 **TipNet Budget** is the optional paid add-on described in section 6: $1.99 a month or $20 a year through Dec 31, 2026, then $3.99 a month or $30 a year from Jan 1, 2027.
-- If you have joined a venue, the Budget page shows one line near the prices: "<Venue> gets a small credit on its TipNet Teams bill when you subscribe." That is a thank-you from us to your venue. It does not change your price, and nothing comes out of your pay or tips.
+- If you have joined a venue, the Budget page shows one line near the prices: "<Venue> gets a small credit (a refund on its TipNet Teams payment) when you subscribe." That is a thank-you from us to your venue: once a month we refund part of its TipNet Teams payment. It does not change your price, and nothing comes out of your pay or tips.
 - Working for more than one venue? A **Credit goes to** choice appears, set to the venue you are working at in the app. Pick the one you want credited before you tap a price.
 - Your venue's credit is 25% of what you pay, and it counts only while you keep your subscription. Your manager sees a count of subscribers, never names.
 - **Budget is never required.** Your manager cannot ask you to buy it for the job, and it can never be taken out of your wages or tips. You can cancel any time (the link is in your receipt email), and tips and pay estimates stay free.

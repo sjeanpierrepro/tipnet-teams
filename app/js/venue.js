@@ -233,7 +233,8 @@ export function venueTipouts(venue, existing = []) {
 }
 
 /* ---------- what a manager's device keeps (settings.team) ---------- */
-export const MAX_STAFF = 60;
+/** TipNet Teams covers up to 50 staff per location: the staff list and a tip sheet hold at most 50 people. */
+export const MAX_STAFF = 50;
 export const MAX_STAFF_NAME = 24;
 export const MAX_POINTS = 100000; // hundredths: 1000 points
 

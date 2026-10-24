@@ -60,7 +60,11 @@ test('legal pages: business customers, staff, the Staff Perks Credit terms, no j
   const priv = readFileSync(new URL('../app/privacy.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
   for (const t of [terms, priv]) assert.match(t, /venue/i);
   assert.match(terms, /25%/);
-  assert.match(terms, /never paid as cash/);
+  assert.match(terms, /partial refund on the venue's most recent TipNet Teams payment/);
+  assert.match(terms, /never more than that payment/);
+  assert.match(terms, /at most 50 staff subscribers per venue/);
+  assert.match(terms, /up to 50 staff per location/);
+  assert.doesNotMatch(terms, /next TipNet Teams bill|never paid as cash/);
   assert.match(terms, /only while the venue's TipNet Teams subscription is active/);
   assert.match(terms, /count only, never as names/);
   assert.match(terms, /can never require a staff member to subscribe as a condition of a job/);

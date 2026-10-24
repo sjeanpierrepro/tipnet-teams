@@ -110,6 +110,22 @@ test('activate: the product id in the reply decides which product a key unlocks'
   assert.equal(b.entitlement.product, 'budget');
 });
 
+test('Budget keys unlock by product id, whatever the variant: old and new prices both work after Jan 1, 2027', async () => {
+  const after = Date.parse('2027-02-01T12:00:00Z');
+  const variants = [
+    { variant_id: 2288812, variant_name: 'Monthly' }, // $1.99 (kept by existing subscribers)
+    { variant_id: 2288818, variant_name: 'Yearly' }, // $20
+    { variant_id: 9999901, variant_name: 'Monthly' }, // a new $3.99 variant, if one is ever made
+    { variant_id: 9999902, variant_name: 'Yearly' }, // a new $30 variant
+  ];
+  for (const now of [NOW, after])
+    for (const meta of variants) {
+      const r = await activateKey('KEY-B', { provider: prov(body(BUDGET_ID, {}, meta)), now });
+      assert.equal(r.ok, true, JSON.stringify(meta));
+      assert.equal(r.product, 'budget');
+    }
+});
+
 test('activate: a key for an unknown product, or another store, is refused in plain words', async () => {
   const other = await activateKey('KEY-X', { provider: prov(body(999)), now: NOW });
   assert.equal(other.ok, false);

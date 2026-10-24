@@ -5,13 +5,13 @@
 // Travelling (version 1): {v:1, i, n, d, m: 'h'|'p'|'e'|'r', r: [[name, minutes, cc, cash], ...]}
 import { parseISO } from './math.js';
 import { b64urlEncode, readCode, intIn, nameIn, dateIn } from './codec.js';
-import { VENUE_ID_RE, MAX_VENUE_NAME, cleanVenueRef, MAX_STAFF_NAME } from './venue.js';
+import { VENUE_ID_RE, MAX_VENUE_NAME, cleanVenueRef, MAX_STAFF_NAME, MAX_STAFF } from './venue.js';
 import { MAX_POOL_CENTS, MAX_MINUTES } from './pool.js';
 
 export const SHEET_VERSION = 1;
 /** The most a sheet code may hold (the JSON, in bytes). A bigger one is refused when made and when read. */
 export const MAX_SHEET_BYTES = 2500;
-export const MAX_SHEET_ROWS = 60;
+export const MAX_SHEET_ROWS = MAX_STAFF; // 50 people a sheet
 export const TOO_BIG_SHEET =
   'This sheet is too big to share as one link or QR code. Split the staff into two sheets and share each one.';
 export const BAD_SHEET_MSG =

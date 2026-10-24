@@ -1,4 +1,4 @@
-// The Team tab (TipNet Teams, manager side): a venue setup code staff can join, and a tip-pool calculator with tip sheets.
+// The Teams tab (TipNet Teams, manager side): a venue setup code staff can join, and a tip-pool calculator with tip sheets.
 // Only shown when entitlements.teamsUnlocked() is true (app.js). Nothing here is sent anywhere: links carry their data in
 // the part after "#", which never reaches a server.
 import {
@@ -1071,7 +1071,8 @@ function poolSection(S) {
     '+ Add a person',
   );
   add.addEventListener('click', () => {
-    if (P.rows.length >= MAX_STAFF) return toast('A tip sheet holds up to ' + MAX_STAFF + ' people.');
+    if (P.rows.length >= MAX_STAFF)
+      return toast('A tip sheet holds up to ' + MAX_STAFF + ' people. For more, make a second sheet.');
     P.rows.push({ name: '', role: '', points: '1', hours: '' });
     drawRows(P.rows.length - 1);
     update();
@@ -1194,10 +1195,10 @@ export function render(root) {
     el(
       'div',
       { class: 'stack' },
-      el('h1', null, 'Team'),
+      el('h1', null, 'Teams'),
       el(
         'div',
-        { class: 'cluster', role: 'group', 'aria-label': 'Team tools' },
+        { class: 'cluster', role: 'group', 'aria-label': 'Teams tools' },
         tab('venue', 'Venue code'),
         tab('pool', 'Tip pool'),
       ),

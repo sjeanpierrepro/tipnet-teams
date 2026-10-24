@@ -1,4 +1,4 @@
-// The Team tab only exists where TipNet Teams is unlocked (for now: the localhost dev unlock).
+// The Teams tab only exists where TipNet Teams is unlocked (a stored Teams license, or the localhost dev unlock).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const setUp = () => realState((S) => (S.workplaces[0].setupDone = true));
 
-test('Team tab: hidden when not unlocked, and the app works as before', async () => {
+test('Teams tab: hidden when not unlocked, and the app works as before', async () => {
   const page = await boot({ seed: setUp() });
   try {
     assert.equal(page.tabHidden('team'), true);
@@ -22,7 +22,7 @@ test('Team tab: hidden when not unlocked, and the app works as before', async ()
   }
 });
 
-test('Team tab: ?unlock=dev on localhost shows it; the same address on another site does not', async () => {
+test('Teams tab: ?unlock=dev on localhost shows it; the same address on another site does not', async () => {
   const page = await boot({ seed: setUp(), url: DEV });
   try {
     assert.equal(page.tabHidden('team'), false);
@@ -44,7 +44,7 @@ test('Team tab: ?unlock=dev on localhost shows it; the same address on another s
   }
 });
 
-test('Team tab: a last tab of "team" on a device where it is locked opens Tonight', async () => {
+test('Teams tab: a last tab of "team" on a device where it is locked opens Tonight', async () => {
   const S = setUp();
   S.settings.lastTab = 'team';
   const page = await boot({ seed: S });
@@ -55,15 +55,15 @@ test('Team tab: a last tab of "team" on a device where it is locked opens Tonigh
   }
 });
 
-test('Team tab: arrow keys skip it while it is hidden, and reach it when unlocked', async () => {
+test('Teams tab: arrow keys skip it while it is hidden, and reach it when unlocked (just before Setup)', async () => {
   const page = await boot({ seed: setUp() });
   try {
     page.tab('setup');
-    page.key(page.$('#tabs [data-tab="setup"]'), 'ArrowRight');
+    page.key(page.$('#tabs [data-tab="setup"]'), 'ArrowLeft');
     assert.equal(
       page.$('#tabs [aria-selected="true"]').dataset.tab,
-      'tonight',
-      'wraps past the hidden Team tab',
+      'periods',
+      'skips the hidden Teams (and Budget) tabs',
     );
   } finally {
     await page.close();
@@ -71,8 +71,11 @@ test('Team tab: arrow keys skip it while it is hidden, and reach it when unlocke
   const dev = await boot({ seed: setUp(), url: DEV });
   try {
     dev.tab('setup');
-    dev.key(dev.$('#tabs [data-tab="setup"]'), 'ArrowRight');
+    dev.key(dev.$('#tabs [data-tab="setup"]'), 'ArrowLeft');
     assert.equal(dev.$('#tabs [aria-selected="true"]').dataset.tab, 'team');
+    const order = [...dev.$$('#tabs [data-tab]')].map((b) => b.dataset.tab);
+    assert.deepEqual(order.slice(-2), ['team', 'setup'], 'Teams sits just before Setup');
+    assert.equal(dev.$('#tabs [data-tab="team"]').textContent.trim(), 'Teams');
   } finally {
     await dev.close();
   }

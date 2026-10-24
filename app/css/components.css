@@ -1331,7 +1331,7 @@ h4 {
   align-items: center;
 }
 /* ---------- TipNet Teams ---------- */
-/* Five tabs (Team shown): the short labels are used up to 440px wide, so nothing is cut off at 375px. */
+/* Five tabs (Teams shown): the short labels are used up to 440px wide, so nothing is cut off at 375px. */
 @media (max-width: 440px) {
   .tabbar.tabs-5 button {
     font-size: 13px;

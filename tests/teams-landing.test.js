@@ -47,7 +47,8 @@ test('landing page: the pitch, what managers get, what staff get, Budget and the
   assert.match(t, /What your staff get, free/);
   assert.match(t, /Staff Perks Credit/);
   assert.match(t, /25%/);
-  assert.match(t, /never cash/i);
+  assert.match(t, /partial refund/i);
+  assert.match(t, /Up to 50 staff/);
   assert.match(t, /No setup fee/);
   assert.match(t, /Already bought\?/);
   assert.match(t, /enter your team key/);
@@ -81,7 +82,7 @@ test('landing page: prices, links and the example are read from the config', () 
   );
   assert.match(
     t,
-    /10 staff keep a Budget subscription at \$1\.99 a month\. Each earns your venue \$0\.50 a month, so your venue gets \$5\.00 off/,
+    /10 staff keep a Budget subscription at \$1\.99 a month\. Each earns your venue \$0\.50 a month, so your venue gets \$5\.00 back that month, as a partial refund on its most recent TipNet Teams payment/,
   );
 
   // change the config, and the page follows
@@ -102,7 +103,7 @@ test('landing page: the Budget price change and its example switch on Jan 1, 202
   assert.match(text(after), /\$3\.99 a month or \$30 a year/);
   assert.match(
     text(after),
-    /at \$3\.99 a month\. Each earns your venue \$1\.00 a month, so your venue gets \$10\.00 off/,
+    /at \$3\.99 a month\. Each earns your venue \$1\.00 a month, so your venue gets \$10\.00 back that month/,
   );
 });
 

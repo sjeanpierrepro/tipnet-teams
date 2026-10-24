@@ -25,7 +25,7 @@ export function creditExample(budgetMonthly, staff = STAFF_IN_EXAMPLE) {
     dollars(each) +
     ' a month, so your venue gets ' +
     dollars(each * staff) +
-    ' off its next TipNet Teams bill.'
+    ' back that month, as a partial refund on its most recent TipNet Teams payment.'
   );
 }
 

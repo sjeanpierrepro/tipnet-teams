@@ -232,7 +232,7 @@ test('venue ref and team data are cleaned', () => {
     'a bad venue is dropped, the id stays',
   );
   assert.equal(cleanTeam({ venueId: 'bad id' }), null);
-  assert.equal(cleanStaff(Array.from({ length: 80 }, (_, i) => ({ name: 'P' + i }))).length, 60);
+  assert.equal(cleanStaff(Array.from({ length: 80 }, (_, i) => ({ name: 'P' + i }))).length, 50);
   assert.equal(cleanStaff([{ name: 'x'.repeat(25) }]).length, 0, 'a name over 24 characters');
   assert.deepEqual(cleanStaff([{ name: 'A', points: -3 }]), [{ name: 'A', role: '', points: 100 }]);
 });
@@ -322,7 +322,7 @@ test('sheet code: strict reading (wrong types, ranges, dates, prototype keys, si
   refuse({ r: [['', 60, 100, 0]] }, 'no name');
   refuse({ r: [['x'.repeat(25), 60, 100, 0]] }, 'name over 24');
   refuse({ r: [[7, 60, 100, 0]] }, 'name type');
-  refuse({ r: Array.from({ length: 61 }, () => ['A', 1, 1, 1]) }, 'more than 60 people');
+  refuse({ r: Array.from({ length: 51 }, () => ['A', 1, 1, 1]) }, 'more than 50 people');
   assert.equal(decodeSheet(code([])), null);
   assert.equal(decodeSheet('A'.repeat(6000)), null);
   assert.equal(decodeSheet(code({ ...w, pad: 'x'.repeat(MAX_SHEET_BYTES) })), null, 'over the byte cap');
@@ -332,8 +332,9 @@ test('sheet code: strict reading (wrong types, ranges, dates, prototype keys, si
 });
 
 test('sheet code: too big is refused when made (split the staff)', () => {
-  const rows = Array.from({ length: 60 }, (_, i) => ({
-    name: 'Person number ' + (i + 1) + ' ab',
+  // 50 people (the most a sheet holds) with long names in accented letters (2 bytes each) is over 2,500 bytes
+  const rows = Array.from({ length: 50 }, (_, i) => ({
+    name: ('Zoë ' + (i + 1) + ' ').padEnd(24, 'é'),
     minutes: 480,
     cc: 1234567,
     cash: 765432,

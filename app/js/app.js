@@ -38,12 +38,12 @@ import * as team from './ui/team.js';
 import * as join from './ui/join.js';
 
 const SCREENS = { tonight, periods, budget, setup, team };
-const TABS = ['tonight', 'periods', 'budget', 'setup', 'team'];
+const TABS = ['tonight', 'periods', 'budget', 'team', 'setup']; // the Teams tab (id 'team') sits just before Setup
 let current = 'tonight';
 
 /** Budget stays out of sight while payments are off, unless this device already has it unlocked. */
 const budgetShown = () => budgetVisible((storage.getState().settings || {}).entitlement);
-/** The Team tab (manager tools) is only there when TipNet Teams is unlocked on this device. */
+/** The Teams tab (manager tools) is only there when TipNet Teams is unlocked on this device. */
 const teamShown = () => teamsUnlocked();
 const visibleTabs = () =>
   TABS.filter((t) => (t !== 'budget' || budgetShown()) && (t !== 'team' || teamShown()));

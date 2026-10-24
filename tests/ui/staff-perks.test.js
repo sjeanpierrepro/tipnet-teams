@@ -47,7 +47,7 @@ test('one venue: both prices carry checkout[custom][venue_id], enabled is kept, 
     ]);
     assert.equal(
       page.text(page.$('#credit-line')),
-      'The Pour House gets a small credit on its TipNet Teams bill when you subscribe.',
+      'The Pour House gets a small credit (a refund on its TipNet Teams payment) when you subscribe.',
     );
     assert.equal(page.$('#credit-venue'), null, 'no choice with one venue');
   });

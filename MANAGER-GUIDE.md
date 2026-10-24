@@ -2,11 +2,11 @@
 
 This is for the person who runs the venue (owner, GM, bar or floor manager). Staff don't need any of it. They open a link you give them and TipNet sets itself up.
 
-The **Team** tab shows up once TipNet Teams is unlocked on your phone. Everything you type there stays on your phone. Nothing is sent to a server, and the links and QR codes you make carry their information in the link itself.
+The **Teams** tab (just before Setup) shows up once TipNet Teams is unlocked on your phone. A plan covers up to 50 staff per location; for a bigger venue, email hello@tipmynet.com for a larger plan (price on request). Everything you type there stays on your phone. Nothing is sent to a server, and the links and QR codes you make carry their information in the link itself.
 
 ## 1. Make your venue code
 
-1. Open **Team**, then **Venue code**.
+1. Open **Teams**, then **Venue code**.
 2. Type your venue's name.
 3. Pick how staff get paid (every week, every two weeks, twice a month...).
 4. Pick the day the **current pay period started** and the day it **ends**, and the **payday** for that pay period (0 to 21 days after it ends).
@@ -27,7 +27,7 @@ Under your code, tap **Print the poster**. It prints the venue name, a big QR co
 
 ## 3. Run a tip pool
 
-1. Open **Team**, then **Tip pool**.
+1. Open **Teams**, then **Tip pool**.
 2. Type your venue name (it goes on the sheet) and pick the **night**.
 3. Type the **pooled credit card tips** and **pooled cash tips**. Either can be 0.
 4. Add everyone who worked: **name** (24 characters at most), **role**, and **hours** (8, 7.5, 7:30 or 45 min all work). Names, roles and points are remembered for next time. Hours are not: you type them each night.
@@ -47,7 +47,11 @@ Under the tip sheet, tap **Share as a link or QR**. TipNet shows **"Anyone with 
 
 Staff open the link, pick their name, and TipNet opens **Tonight** for that date with their credit card tips, cash tips and hours already filled in and tip-outs unticked (the pool was already split). They look it over and tap **Save night**. Nothing is saved for them until they do.
 
-A sheet can hold about 60 people. If it is too big to share as one link, TipNet says so: **split the staff into two sheets** and share each one.
+A sheet holds up to 50 people. If you try to add more, TipNet says so: make a second sheet. A very full sheet (long names, many people) can also be too big to share as one link; TipNet says so: **split the staff into two sheets** and share each one. Printing still works. If it fits a link but not a QR code, you get the link only, with a note.
+
+## The Staff Perks Credit
+
+When a staff member who joined your venue keeps a TipNet Budget subscription, your venue earns 25% of what they pay. Once a month we give it to you as a partial refund to your card on your most recent TipNet Teams payment, never more than that payment. We count at most 50 staff subscribers per venue, so the credit is always less than your bill. You see a count, never names. Budget is never required for the job and can never be taken out of wages or tips.
 
 ## Good to know
 

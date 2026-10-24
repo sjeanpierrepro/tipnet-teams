@@ -1,4 +1,4 @@
-// Team tab, venue setup code: the manager fills in the venue, gets a link, a QR code and a poster; the id stays.
+// Teams tab, venue setup code: the manager fills in the venue, gets a link, a QR code and a poster; the id stays.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, realState } from './harness.js';
