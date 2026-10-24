@@ -92,7 +92,7 @@ test('managers card: bottom of Setup while Teams is locked, links to the manager
     assert.match(page.text(card), /Tip pools, tip sheets and a venue QR for your bar or restaurant\./);
     assert.doesNotMatch(page.text(card), /managers/i);
     assert.equal(page.$('#managers-see').textContent, 'See Teams');
-    assert.match(page.text(card), /\$59 a month or \$500 a year per location/);
+    assert.match(page.text(card), /\$59 a month or \$500 a year per location, up to 50 staff/);
     assert.equal(page.$('#managers-see').getAttribute('href'), 'teams/index.html');
     assert.ok(page.$('#license-key', card), 'a team key can be entered');
     assert.doesNotMatch(page.text(card), /Coming soon/);

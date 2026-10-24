@@ -6,7 +6,14 @@ import { businessDate, cutoffFromSettings, dateProblem } from '../inputs.js';
 import { decodeVenue, BAD_LINK_MSG } from '../venue.js';
 import { decodeSheet, BAD_SHEET_MSG, METHOD_TEXT } from '../sheet.js';
 import { hoursLabel } from '../pool.js';
-import { isSetUp, isWorkplaceSetUp, canAddWorkplace, findWorkplace, activeWorkplace } from '../storage.js';
+import {
+  isSetUp,
+  isWorkplaceSetUp,
+  canAddWorkplace,
+  findWorkplace,
+  activeWorkplace,
+  FIRST_WORKPLACE_NAME,
+} from '../storage.js';
 import { isUnlocked } from '../billing.js';
 import { el, clear, toast, arm, bus, getState, money, fmtDate } from './common.js';
 import { startVenueSetup, addVenueEstablishment, updateFromVenue, limitLine, joinBlocked } from './setup.js';
@@ -96,6 +103,17 @@ export function venuePreview(v) {
   );
 }
 
+/**
+ * Which establishment "Set up with these" fills in, in words. One still named by default (My establishment,
+ * Establishment 2...) takes the venue's name; one the person named keeps its name and gets the venue's numbers.
+ */
+function venueTarget(S, v) {
+  const w = activeWorkplace(S);
+  if (!w || w.name === FIRST_WORKPLACE_NAME || /^Establishment [0-9]+$/.test(w.name))
+    return 'TipNet sets up ' + v.name + ' with these.';
+  return 'TipNet fills these in for ' + w.name + ', which isn’t set up yet.';
+}
+
 /** Sets up from the venue, in the way that fits what is on this device. */
 function joinScreen(root, v) {
   const S = getState();
@@ -133,9 +151,8 @@ function joinScreen(root, v) {
       el(
         'p',
         { class: 'note' },
-        'TipNet fills these in for ' +
-          (activeWorkplace(S) || { name: 'your establishment' }).name +
-          '. You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.',
+        venueTarget(S, v) +
+          ' You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.',
       ),
       el('div', { class: 'cluster' }, go),
     ];
@@ -291,9 +308,9 @@ function sheetScreen(root, sheet) {
       cash: r.cash,
       minutes: r.minutes,
       note:
-        'From the ' +
+        'From the tip sheet for ' +
         sheet.venue.name +
-        ' tip sheet for ' +
+        ', ' +
         fmtDate(sheet.date) +
         '. Tip-outs are unticked: the pool was already split.',
     });

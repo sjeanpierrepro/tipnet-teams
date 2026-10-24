@@ -69,7 +69,7 @@ test('opening Tonight: the date, tips and hours are filled in, tip-outs are unti
     page.click(page.$('#sheet-open'));
     await page.settle();
     assert.equal(tabNow(page), 'tonight');
-    assert.match(page.text(page.$('#sheet-note')), /^From the The Corner Bar tip sheet for /);
+    assert.match(page.text(page.$('#sheet-note')), /^From the tip sheet for The Corner Bar, /);
     assert.match(page.$('#sheet-note').textContent, /Tip-outs are unticked/);
     assert.equal(key(page, 'night-cc').value, '123.45');
     assert.equal(key(page, 'night-cash').value, '20.5');

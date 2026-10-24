@@ -72,6 +72,12 @@ test('no setup yet: "Set up with these" starts the guided setup filled in, with 
   const page = await boot({ url: joinUrl(v) });
   try {
     assert.match(page.text(page.$('#join-screen')), /still add your own gross pay, deductions and shifts/);
+    assert.match(
+      page.text(page.$('#join-screen')),
+      /TipNet sets up The Corner Bar with these./,
+      'it names what it fills in',
+    );
+    assert.equal(page.$('#managers-card'), null, 'no Teams card under the Join screen');
     page.click(page.$('#join-start'));
     await page.settle();
     assert.equal(tabNow(page), 'setup');

@@ -13,7 +13,11 @@ export function managersCard() {
     { class: 'card stack', id: 'managers-card', 'aria-labelledby': 'managers-card-h' },
     el('h2', { id: 'managers-card-h' }, 'Teams'),
     el('p', null, 'Tip pools, tip sheets and a venue QR for your bar or restaurant.'),
-    el('p', null, el('strong', null, p.monthly + ' a month or ' + p.yearly + ' a year per location')),
+    el(
+      'p',
+      null,
+      el('strong', null, p.monthly + ' a month or ' + p.yearly + ' a year per location, up to 50 staff'),
+    ),
     productOn('teams')
       ? null
       : el(

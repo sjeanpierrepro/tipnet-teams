@@ -206,7 +206,7 @@ function render() {
         }
       }
       // The "Teams" card sits just above the Budget card at the bottom of Setup, until Teams is unlocked here.
-      if (current === 'setup' && !setup.guidedOnScreen()) {
+      if (current === 'setup' && !join.pendingLink() && !setup.guidedOnScreen()) {
         const managers = managersCard();
         if (managers) root.append(managers);
       }
