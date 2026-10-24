@@ -81,7 +81,8 @@ import {
   lockFinished,
   flush,
 } from '../storage.js';
-import { venuePayTypes, venueTipouts, venueFromText, BAD_LINK_MSG } from '../venue.js';
+import { venuePayTypes, venueTipouts, decodeVenue } from '../venue.js';
+import { decodeSheet } from '../sheet.js';
 import { renderBackup, renderInstall, fileSaver } from './backup.js';
 import { installStepKind, installHowTo, promptInstall, isIos, isAndroid } from './install.js';
 import { buildIcs, makeUid, timeLabel, nightsLabel, isMorning, DAY_NAMES } from '../ics.js';
@@ -2042,14 +2043,38 @@ export function updateFromVenue(S, w, v) {
   lockFinished({ force: true });
   save();
 }
-/** "Join your venue": paste a venue link or code. A good one opens the Join screen (ui/join.js); a bad one says so. */
+/** Said when a paste in Setup > Join your venue is neither a venue code nor a tip sheet. */
+export const BAD_PASTE_MSG =
+  'This isn’t a TipNet Teams venue code or tip sheet link (or it’s from a newer version). Nothing was changed.';
+/**
+ * What someone pasted (a whole link, or just the code after #join= or #sheet=): {kind: 'join', venue} or
+ * {kind: 'sheet', sheet}, or null. A bare code is tried as a venue code first, then as a tip sheet.
+ */
+export function pastedLink(text) {
+  const t = String(text == null ? '' : text).replace(/\s+/g, '');
+  const m = /#(join|sheet)=([^#]*)/.exec(t);
+  const asVenue = (d) => {
+    const venue = decodeVenue(d);
+    return venue ? { kind: 'join', venue } : null;
+  };
+  const asSheet = (d) => {
+    const sheet = decodeSheet(d);
+    return sheet ? { kind: 'sheet', sheet } : null;
+  };
+  if (m) return m[1] === 'join' ? asVenue(m[2]) : asSheet(m[2]);
+  return asVenue(t) || asSheet(t);
+}
+/**
+ * "Join your venue": paste a venue link or code, or a tip sheet link (the way into the Home Screen app on iPhone, whose
+ * data is not Safari's). A good one opens the Join or Tip sheet screen (ui/join.js); a bad one says so.
+ */
 function joinCard() {
   const box = el('textarea', {
     id: 'join-code',
     rows: '3',
     spellcheck: 'false',
     autocapitalize: 'off',
-    placeholder: 'Paste the venue link or code here.',
+    placeholder: 'Paste the link or code here.',
   });
   const msg = el('p', { class: 'field-error', role: 'alert', hidden: true });
   const go = el(
@@ -2058,14 +2083,19 @@ function joinCard() {
     'Check code',
   );
   go.addEventListener('click', () => {
-    const v = venueFromText(box.value);
-    if (!v) {
-      msg.textContent = BAD_LINK_MSG;
+    let p;
+    try {
+      p = pastedLink(box.value);
+    } catch (e) {
+      p = null; // anything that does not read is a bad paste, never an error screen
+    }
+    if (!p) {
+      msg.textContent = BAD_PASTE_MSG;
       msg.hidden = false;
       return;
     }
     msg.hidden = true;
-    bus.openLink({ kind: 'join', venue: v });
+    bus.openLink(p);
   });
   return el(
     'section',
@@ -2074,9 +2104,9 @@ function joinCard() {
     el(
       'p',
       { class: 'note' },
-      'If your manager gave you a TipNet Teams link or code, paste it here to set up with your venue’s pay schedule, jobs and tip-outs. You see it first and nothing changes until you say so.',
+      'If your manager gave you a TipNet Teams venue link or code, or a tip sheet link, paste it here. You see it first and nothing changes until you say so.',
     ),
-    field('Venue link or code', box),
+    field('Link or code from your manager', box),
     msg,
     el('div', { class: 'cluster' }, go),
   );
@@ -3348,7 +3378,12 @@ function fullPage(root, S, active) {
       ),
       S.workplaces.map((w) => restaurantRow(S, w)),
       addWorkplaceCard(S),
-      foldRow('join', 'Join your venue', () => 'Paste a link from your manager', inner(joinCard())),
+      foldRow(
+        'join',
+        'Join your venue',
+        () => 'Paste a venue or tip sheet link from your manager',
+        inner(joinCard()),
+      ),
       el(
         'p',
         { class: 'label fold-group' },

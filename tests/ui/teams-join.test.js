@@ -387,7 +387,7 @@ test('Setup > Join your venue: paste a link or a bare code; a bad paste says so'
     page.click(page.$('#join-go'));
     assert.match(
       page.text(page.$('#join-code').parentNode.parentNode),
-      /This link isn’t a TipNet Teams venue code/,
+      /This isn’t a TipNet Teams venue code or tip sheet link/,
     );
     assert.equal(page.$('#join-screen'), null);
     fill(page, '#join-code', joinUrl());

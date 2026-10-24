@@ -120,6 +120,10 @@ If your venue uses TipNet Teams, your manager can hand you a QR poster to join t
 - **Already set up:** tap **Add as a new establishment** (you can have 3 in the free app, 5 with Budget). If you already joined this venue, you'll see **Update jobs and tip-outs from (your venue)** instead. Tap it twice to confirm. Your own paystub numbers stay, and pay periods that have already ended keep the pay they were saved with.
 - **Not now** closes it and changes nothing.
 
+**On iPhone:** links open in Safari, and Safari and the Home Screen app keep separate data. If you use TipNet Teams from your Home Screen, tap **Copy link** on the screen that opens, open the app from its icon, and paste the link in **Setup > Join your venue** (it takes tip sheet links too). If you set up in Safari instead, tap **Set up here in Safari instead**.
+
+Only open venue and tip sheet links that come from your manager.
+
 If a link doesn't work, TipNet says: "This link isn't a TipNet Teams venue code (or it's from a newer version). Nothing was changed."
 
 **Your tip sheet.** After a shift your manager may share a tip sheet link or QR code. Open it, tap your name, then **Open Tonight with my numbers**. Tonight opens for that date with your credit card tips, cash tips and hours filled in, and tip-outs unticked (the pool was already split). A note says which venue's tip sheet it came from. Look it over and tap **Save night**: nothing is saved until you do. If you already saved a night for that date, TipNet asks whether to add to it, replace it, or save it as a separate night, like always.

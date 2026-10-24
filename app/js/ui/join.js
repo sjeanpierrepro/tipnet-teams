@@ -3,8 +3,9 @@
 // changed or saved until the person taps a button.
 import { addDays } from '../math.js';
 import { businessDate, cutoffFromSettings, dateProblem } from '../inputs.js';
-import { decodeVenue, BAD_LINK_MSG } from '../venue.js';
-import { decodeSheet, BAD_SHEET_MSG, METHOD_TEXT } from '../sheet.js';
+import { decodeVenue, venueLink, BAD_LINK_MSG } from '../venue.js';
+import { decodeSheet, sheetLink, BAD_SHEET_MSG, METHOD_TEXT } from '../sheet.js';
+import { isIosSafariTab, installStepKind } from './install.js';
 import { hoursLabel } from '../pool.js';
 import {
   isSetUp,
@@ -49,6 +50,55 @@ const close = () => {
   pending = null;
   bus.rerender();
 };
+
+export const IPHONE_HINT =
+  'On iPhone, Safari and the Home Screen app keep separate data. Using TipNet Teams from your Home Screen? Copy this link, open the app from its icon, and paste it in Setup > Join your venue.';
+/**
+ * iPhone/iPad Safari only: links open in Safari, but the worker may use the Home Screen app, whose data is separate.
+ * The card says so and gives the link back (Copy link, with the link itself in a box to copy by hand). makeLink builds
+ * the link from the code that was opened; null on any other device.
+ */
+function iphoneCard(makeLink, idp) {
+  if (!isIosSafariTab()) return null;
+  let url = '';
+  try {
+    url = makeLink();
+  } catch (e) {
+    url = '';
+  }
+  const box = el('textarea', {
+    id: idp + '-iphone-link',
+    rows: '2',
+    readonly: true,
+    spellcheck: 'false',
+    'aria-label': 'Link',
+  });
+  box.value = url;
+  const msg = el('p', { class: 'hint', role: 'status', 'aria-live': 'polite', id: idp + '-iphone-msg' });
+  const copy = el(
+    'button',
+    { type: 'button', class: 'btn btn-secondary btn-small', id: idp + '-iphone-copy' },
+    'Copy link',
+  );
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      msg.textContent = 'Copied.';
+    } catch (e) {
+      box.focus();
+      box.select();
+      msg.textContent = 'Selected. Copy it by hand.';
+    }
+  });
+  return el(
+    'section',
+    { class: 'card stack', id: idp + '-iphone' },
+    el('p', { class: 'note' }, IPHONE_HINT),
+    url ? box : null,
+    url ? el('div', { class: 'cluster' }, copy) : null,
+    msg,
+  );
+}
 
 const FREQ_TEXT = {
   7: 'Every week',
@@ -137,11 +187,18 @@ function joinScreen(root, v) {
   });
   let body;
   if (!isSetUp(S)) {
-    // no setup yet: the guided setup starts with the venue's numbers in
-    const go = el('button', { type: 'button', class: 'btn', id: 'join-start' }, 'Set up with these');
+    // no setup yet: the guided setup starts with the venue's numbers in. In iPhone Safari (whose first guided step is
+    // "home screen first") tapping here is choosing Safari, so that step is answered; the card below offers the other way.
+    const inSafari = installStepKind(S.settings) === 'ios';
+    const go = el(
+      'button',
+      { type: 'button', class: 'btn', id: 'join-start' },
+      inSafari ? 'Set up here in Safari instead' : 'Set up with these',
+    );
     go.addEventListener(
       'click',
       guard(() => {
+        if (inSafari) S.settings.installStepSeen = true;
         startVenueSetup(S, v);
         pending = null;
         bus.go('setup');
@@ -222,6 +279,7 @@ function joinScreen(root, v) {
       { class: 'stack', id: 'join-screen' },
       el('h1', { tabindex: '-1', id: 'join-h1' }, 'Join ' + v.name),
       el('p', { class: 'note' }, 'Your manager shared this. It has no pay or personal information in it.'),
+      iphoneCard(() => venueLink(v), 'join'),
       venuePreview(v),
       body,
       blocked,
@@ -263,6 +321,7 @@ function sheetScreen(root, sheet) {
           ),
           el('div', { class: 'cluster' }, go),
         ),
+        iphoneCard(() => sheetLink(sheet), 'sheet'),
         el('div', null, notNow),
       ),
     );
@@ -330,6 +389,7 @@ function sheetScreen(root, sheet) {
           METHOD_TEXT[sheet.method] +
           '. Pick your name to log your share on Tonight.',
       ),
+      iphoneCard(() => sheetLink(sheet), 'sheet'),
       dateBad
         ? el(
             'p',
