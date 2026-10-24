@@ -303,3 +303,27 @@ test('print the tip sheet: a print-only block with the table and its totals', as
     await page.close();
   }
 });
+
+test('a half-typed tip pool and venue form stay while the app is open, across tab switches', async () => {
+  const page = await boot({ seed: seed(), url: DEV });
+  try {
+    await openPool(page);
+    fill(page, '#pool-cc', '321.00');
+    person(page, 0, 'Sam', 'Bar', '6');
+    page.tab('tonight');
+    page.tab('setup');
+    await openPool(page);
+    assert.equal(page.$('#pool-cc').value, '321.00');
+    assert.equal(page.$('#pr-name-0').value, 'Sam');
+    assert.equal(page.$('#pr-hours-0').value, '6');
+    page.click(page.$('#team-venue-tab'));
+    const name = page.$('#team-venue-name') || page.$('input[placeholder="e.g. The Corner Bar"]');
+    page.type(name, 'Half Typed');
+    page.tab('tonight');
+    page.tab('team');
+    const again = page.$('#team-venue-name') || page.$('input[placeholder="e.g. The Corner Bar"]');
+    assert.equal(again.value, 'Half Typed');
+  } finally {
+    await page.close();
+  }
+});

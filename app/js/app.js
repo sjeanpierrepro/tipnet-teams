@@ -248,7 +248,8 @@ function go(tab, opts = {}) {
     try {
       periods.reset();
       budget.reset();
-      team.reset();
+      // the Teams forms (venue code, tip pool) keep what was typed while the app is open, like Tonight's entries;
+      // team.reset() runs only when the saved state is replaced (restore, erase)
     } catch (e) {
       /* reset only clears screen memory */
     }
