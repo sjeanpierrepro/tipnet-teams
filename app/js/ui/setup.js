@@ -80,6 +80,7 @@ import {
   FIRST_WORKPLACE_NAME,
   lockFinished,
   flush,
+  cutText,
 } from '../storage.js';
 import { venuePayTypes, venueTipouts, decodeVenue } from '../venue.js';
 import { decodeSheet } from '../sheet.js';
@@ -1476,7 +1477,7 @@ function tipoutCard(ctx) {
           autocomplete: 'off',
         });
         nm.addEventListener('input', () => {
-          r.who = nm.value.trim().slice(0, 40) || 'Other';
+          r.who = cutText(nm.value.trim(), 40) || 'Other';
           ctx.touch(false);
         });
         kids.push(field('Name', nm));
@@ -1940,7 +1941,7 @@ export function limitLine(unlocked) {
 function freeWorkplaceName(S, base, except) {
   const taken = new Set(S.workplaces.filter((x) => x !== except).map((x) => x.name.trim().toLowerCase()));
   for (let k = 1; ; k++) {
-    const n = k === 1 ? base : base.slice(0, 40 - String(k).length - 1) + ' ' + k;
+    const n = k === 1 ? base : cutText(base, 40 - String(k).length - 1) + ' ' + k;
     if (!taken.has(n.toLowerCase())) return n;
   }
 }
@@ -2198,7 +2199,7 @@ function addWorkplaceCard(S) {
   );
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const n = name.value.trim().slice(0, 40);
+    const n = cutText(name.value.trim(), 40);
     let err = '';
     if (!n) err = 'Give the establishment a name, so you can tell your paychecks apart.';
     else if (S.workplaces.some((x) => sameName(x.name, n)))
@@ -2304,7 +2305,7 @@ function workplaceCard(ctx) {
   });
   if (ctx.draft) name.value = ctx.draft.name;
   name.addEventListener('input', () => {
-    const n = name.value.trim().slice(0, 40);
+    const n = cutText(name.value.trim(), 40);
     if (ctx.draft) {
       // the draft keeps what is typed; Save says what is wrong with it
       ctx.draft.name = n;

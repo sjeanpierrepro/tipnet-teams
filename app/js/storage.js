@@ -51,6 +51,8 @@ const STATE_KEY = 'state';
 export const MAX_PAY_TYPES = 30;
 export const MAX_TIPOUTS = 20;
 export const FIRST_WORKPLACE_NAME = 'My establishment';
+/** The first n characters of text, counted as code points, so an emoji or accented letter is never cut in half. */
+export const cutText = (text, n) => Array.from(String(text)).slice(0, n).join('');
 /**
  * The names v37 and earlier gave by themselves ("My restaurant", "Restaurant 2") follow the "establishment" wording.
  * Only once, when upgrading data saved before settings.wordingV38 existed: a name typed after that is always kept.
@@ -288,7 +290,7 @@ function cleanTipoutSetup(src) {
     .map((x, i) => {
       const k = TIPOUT_KEYS.includes(x.k) ? x.k : 'other';
       const preset = TIPOUT_PRESETS.find((pr) => pr.k === k);
-      const who = typeof x.who === 'string' ? x.who.trim().slice(0, 40) : '';
+      const who = typeof x.who === 'string' ? cutText(x.who.trim(), 40) : '';
       return {
         id: uniqueId(x.id, seen, 't', i + 1),
         k,
@@ -775,14 +777,14 @@ function migrateUnsafe(input, today) {
 
   // Names in use, so the one-time rename (renameOldDefault) never makes two establishments share a name.
   const taken = new Set(
-    rawW.map((w) => (typeof w.name === 'string' ? w.name.trim().slice(0, 40).toLowerCase() : '')),
+    rawW.map((w) => (typeof w.name === 'string' ? cutText(w.name.trim(), 40).toLowerCase() : '')),
   );
   const workplaces = rawW.map((w, i) => {
     const p = w.profile;
     const mine = rawNights.filter((n) => n.workplaceId === ids[i]);
     upgradeOldProfile(p, mine);
     const example = i === 0 && !!S.profileExample;
-    const typed = typeof w.name === 'string' ? w.name.trim().slice(0, 40) : '';
+    const typed = typeof w.name === 'string' ? cutText(w.name.trim(), 40) : '';
     let name = settingsIn.wordingV38 === true ? typed : renameOldDefault(typed);
     if (name !== typed) {
       name = freeName(name, taken);

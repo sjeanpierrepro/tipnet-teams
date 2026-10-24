@@ -146,3 +146,15 @@ test('two open copies: a venue set in one window is kept when the other saves', 
   assert.deepEqual(merged.settings.team, { venueId: ID });
   assert.equal(merged.settings.theme, 'dark');
 });
+
+test('names are cut by characters, never in the middle of an emoji', async () => {
+  const { cutText } = await import('../app/js/storage.js');
+  assert.equal(cutText('\u{1F37A}'.repeat(45), 40), '\u{1F37A}'.repeat(40));
+  const S = real((x) => (x.workplaces[0].name = 'é\u{1F37A}'.repeat(30)));
+  const name = S.workplaces[0].name;
+  assert.equal(Array.from(name).length, 40);
+  assert.ok(
+    !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(name),
+    'no half emoji',
+  );
+});
