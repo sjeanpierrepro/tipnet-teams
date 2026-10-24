@@ -84,8 +84,8 @@ export function readConfig(raw) {
     // budget's, shared (same objects) so a change to one shows in the other
     prices: products.budget.prices,
     checkout: products.budget.checkout,
-    productIds: [products.budget.productId, products.teams.productId].filter(Boolean),
-    storeId: /^d+$/.test(String(c.storeId || '').trim()) ? String(c.storeId).trim() : '',
+    productIds: [products.budget.productId].filter(Boolean), // the older Budget-only list
+    storeId: /^[0-9]+$/.test(String(c.storeId || '').trim()) ? String(c.storeId).trim() : '',
     organizationId,
     benefitId,
     portalUrl: str(c.portalUrl),
