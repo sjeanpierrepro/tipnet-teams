@@ -34,6 +34,7 @@ import {
   TIPOUT_PRESETS,
   tipoutSetup,
   carryTicks,
+  savedTipout,
 } from '../math.js';
 import { budgetVisible, isUnlocked, productOn } from '../billing.js';
 import { teamsUnlocked } from '../entitlements.js';
@@ -76,9 +77,11 @@ import {
   workplaceLimit,
   MAX_PAY_TYPES,
   MAX_TIPOUTS,
+  FIRST_WORKPLACE_NAME,
   lockFinished,
   flush,
 } from '../storage.js';
+import { venuePayTypes, venueTipouts, venueFromText, BAD_LINK_MSG } from '../venue.js';
 import { renderBackup, renderInstall, fileSaver } from './backup.js';
 import { installStepKind, installHowTo, promptInstall, isIos, isAndroid } from './install.js';
 import { buildIcs, makeUid, timeLabel, nightsLabel, isMorning, DAY_NAMES } from '../ics.js';
@@ -97,6 +100,7 @@ let guidedFor = null;
 let gProfile = null;
 let noDeductions = false; // "My paystub has no deductions" ticked (on the blank copy)
 let adding = null; // "+ Set up another establishment" is open: {name, error}
+let joinPaste = false; // the first guided step shows the "Join your venue" paste box
 /**
  * The full Setup page shows each restaurant as one row. The open one is edited as a draft (a copy), applied by Save:
  * open = {wid, base, draft}, where base and draft are {name, noDeductions, profile} (base: as it was when opened).
@@ -141,6 +145,7 @@ export function reset() {
   gProfile = null;
   noDeductions = false;
   adding = null;
+  joinPaste = false;
   restoreRequest.open = false;
   rateCleared.clear();
 }
@@ -1911,6 +1916,171 @@ function startNewWorkplace(S, name) {
     h.focus();
   }
 }
+/** The plain line under a disabled "+ Set up another establishment": how many fit, and what Budget adds. */
+export function limitLine(unlocked) {
+  return unlocked
+    ? 'You can have up to ' + workplaceLimit(true) + ' establishments.'
+    : !productOn('budget')
+      ? // payments off: no "unlock" to push, Budget can't be bought yet
+        'You can have up to ' +
+        workplaceLimit(false) +
+        ' establishments in the free app. TipNet Budget (coming soon) will allow up to ' +
+        workplaceLimit(true) +
+        '. '
+      : 'You can have up to ' +
+        workplaceLimit(false) +
+        ' establishments. Unlock TipNet Budget to add up to ' +
+        workplaceLimit(true) +
+        '. ';
+}
+
+/* ---------- TipNet Teams: setting up from a venue code (see ui/join.js, which asks first) ---------- */
+/** A name no other establishment has (case-insensitive): base, else "base 2", "base 3"... (40 characters at most). */
+function freeWorkplaceName(S, base, except) {
+  const taken = new Set(S.workplaces.filter((x) => x !== except).map((x) => x.name.trim().toLowerCase()));
+  for (let k = 1; ; k++) {
+    const n = k === 1 ? base : base.slice(0, 40 - String(k).length - 1) + ' ' + k;
+    if (!taken.has(n.toLowerCase())) return n;
+  }
+}
+/** The venue's schedule, jobs and tip-outs written onto a blank paystub (no gross pay, deductions or shifts: they are the worker's own). */
+function venueProfile(v) {
+  const p = blankProfile();
+  p.freq = v.freq;
+  p.periodStart = v.start;
+  p.periodEnd = v.end;
+  p.payDelay = v.delay;
+  p.payTypes = venuePayTypes(v);
+  const to = venueTipouts(v);
+  p.tipouts = to.list;
+  p.tipout = savedTipout(to.on, to.list);
+  return p;
+}
+/** Remember the venue on the establishment; a default name ("My establishment") becomes the venue's. */
+function stampVenue(S, w, v) {
+  w.venue = { id: v.id, name: v.name };
+  if (w.name === FIRST_WORKPLACE_NAME || /^Establishment [0-9]+$/.test(w.name))
+    w.name = freeWorkplaceName(S, v.name, w);
+}
+/** Something typed in an open establishment is not applied yet: the join waits for the person to save or discard it. */
+export const joinBlocked = () => hasUnsaved() || pendingEdits.size > 0;
+/**
+ * Nothing is set up yet: the guided setup starts with the venue's schedule, jobs and tip-outs filled in. The worker still
+ * adds gross pay, deductions and shifts from their own paystub, and can change anything.
+ */
+export function startVenueSetup(S, v) {
+  const w = activeWorkplace(S);
+  const first = isFirstWorkplace(S, w);
+  if (first && S.profileExample) {
+    gProfile = venueProfile(v); // the example numbers are never kept: the guided steps work on this blank copy
+  } else {
+    // a half-finished establishment (Skip guided setup, or one added and not finished): the venue's numbers go onto it
+    const p = venueProfile(v);
+    ['freq', 'periodStart', 'periodEnd', 'payDelay', 'payTypes', 'tipout', 'tipouts'].forEach((k) => {
+      w.profile[k] = p[k];
+    });
+    delete w.guideSkipped;
+    if (!first) w.setupDone = false;
+    gProfile = null;
+  }
+  stampVenue(S, w, v);
+  S.settings.activeWorkplaceId = w.id;
+  guidedFor = w.id;
+  guidedStep = 0;
+  noDeductions = false;
+  adding = null;
+  open = null;
+  keepGuided(S);
+  save();
+  return w;
+}
+/** A new establishment from the venue (its guided setup starts with the venue's numbers). False at the limit. */
+export function addVenueEstablishment(S, v) {
+  if (!canAddWorkplace(S, isUnlocked(S.settings.entitlement))) return null;
+  const w = {
+    id: newWorkplaceId(S),
+    name: freeWorkplaceName(S, v.name),
+    profile: venueProfile(v),
+    calib: [],
+    setupDone: false,
+    venue: { id: v.id, name: v.name },
+  };
+  S.workplaces.push(w);
+  S.settings.activeWorkplaceId = w.id;
+  adding = null;
+  open = null;
+  guidedFor = w.id;
+  guidedStep = 0;
+  gProfile = null;
+  noDeductions = false;
+  keepGuided(S);
+  save();
+  return w;
+}
+/**
+ * "Update jobs and tip-outs from the venue" on an establishment that has the same venue id. Only the jobs and the tip-outs
+ * change (the pay schedule, paystub numbers, deductions and other pay stay). A pay period that has ended is locked first
+ * with the Setup it was saved with, and a job taken out that a saved night used stays (retired), exactly as Setup's
+ * Save does, so no finished pay period changes.
+ */
+export function updateFromVenue(S, w, v) {
+  lockFinished();
+  const live = w.profile;
+  const peopleBefore = copyOf(tipoutSetup(live).list);
+  const payBefore = copyOf(live.payTypes || []);
+  const isJob = (t, i) => payKind(t, i) === 'job' && !isRetired(t);
+  live.payTypes = keepUsedPay(
+    payBefore,
+    venuePayTypes(v, payBefore, isJob),
+    S.nightsExample ? [] : nightsOf(S, w.id),
+  );
+  const to = venueTipouts(v, peopleBefore);
+  live.tipouts = to.list;
+  live.tipout = savedTipout(to.on, to.list);
+  carryTipoutTicks(S, w, peopleBefore);
+  w.venue = { id: v.id, name: v.name };
+  lockFinished({ force: true });
+  save();
+}
+/** "Join your venue": paste a venue link or code. A good one opens the Join screen (ui/join.js); a bad one says so. */
+function joinCard() {
+  const box = el('textarea', {
+    id: 'join-code',
+    rows: '3',
+    spellcheck: 'false',
+    autocapitalize: 'off',
+    placeholder: 'Paste the venue link or code here.',
+  });
+  const msg = el('p', { class: 'field-error', role: 'alert', hidden: true });
+  const go = el(
+    'button',
+    { type: 'button', class: 'btn btn-secondary btn-small', id: 'join-go' },
+    'Check code',
+  );
+  go.addEventListener('click', () => {
+    const v = venueFromText(box.value);
+    if (!v) {
+      msg.textContent = BAD_LINK_MSG;
+      msg.hidden = false;
+      return;
+    }
+    msg.hidden = true;
+    bus.openLink({ kind: 'join', venue: v });
+  });
+  return el(
+    'section',
+    { class: 'card stack' },
+    el('h2', null, 'Join your venue'),
+    el(
+      'p',
+      { class: 'note' },
+      'If your manager gave you a TipNet Teams link or code, paste it here to set up with your venue’s pay schedule, jobs and tip-outs. You see it first and nothing changes until you say so.',
+    ),
+    field('Venue link or code', box),
+    msg,
+    el('div', { class: 'cluster' }, go),
+  );
+}
 /** "+ Set up another restaurant", then its name. */
 function addWorkplaceCard(S) {
   const unlocked = isUnlocked(S.settings.entitlement);
@@ -1928,24 +2098,7 @@ function addWorkplaceCard(S) {
       },
       '+ Set up another establishment',
     );
-    const line = el(
-      'p',
-      { class: 'hint', id: 'wp-limit' },
-      unlocked
-        ? 'You can have up to ' + workplaceLimit(true) + ' establishments.'
-        : !productOn('budget')
-          ? // payments off: no "unlock" to push, Budget can't be bought yet
-            'You can have up to ' +
-            workplaceLimit(false) +
-            ' establishments in the free app. TipNet Budget (coming soon) will allow up to ' +
-            workplaceLimit(true) +
-            '. '
-          : 'You can have up to ' +
-            workplaceLimit(false) +
-            ' establishments. Unlock TipNet Budget to add up to ' +
-            workplaceLimit(true) +
-            '. ',
-    );
+    const line = el('p', { class: 'hint', id: 'wp-limit' }, limitLine(unlocked));
     if (!unlocked) {
       const see = el(
         'button',
@@ -2515,6 +2668,29 @@ function guided(root, ctx) {
           ),
         )
       : null;
+  // TipNet Teams: a venue link or code someone was given opens the same Join screen as the link does.
+  const joinLink =
+    !pre && guidedStep === 0 && first && !many && !joinPaste
+      ? el(
+          'div',
+          null,
+          el(
+            'button',
+            {
+              type: 'button',
+              class: 'btn-link',
+              id: 'join-link',
+              onclick: () => {
+                joinPaste = true;
+                bus.rerender();
+                const b = document.getElementById('join-code');
+                if (b) b.focus();
+              },
+            },
+            'Joining a venue? Paste its link or code',
+          ),
+        )
+      : null;
   // A restaurant added later can be dropped before it is finished (Undo brings it back).
   let cancel = null;
   if (!first && many) {
@@ -2549,6 +2725,8 @@ function guided(root, ctx) {
         ),
       ),
       restoreLink,
+      joinLink,
+      joinPaste && guidedStep === 0 && first && !many ? joinCard() : null,
       explain(
         el(
           'p',
@@ -3170,6 +3348,7 @@ function fullPage(root, S, active) {
       ),
       S.workplaces.map((w) => restaurantRow(S, w)),
       addWorkplaceCard(S),
+      foldRow('join', 'Join your venue', () => 'Paste a link from your manager', inner(joinCard())),
       el(
         'p',
         { class: 'label fold-group' },

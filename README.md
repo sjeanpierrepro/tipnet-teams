@@ -130,7 +130,18 @@ A calm **TipNet Budget** card at the bottom of Tonight, Pay periods and Setup sh
 
 To try it locally, open the app on localhost with `?unlock=dev` on the end of the address.
 
-## TipNet Teams (for managers)
+## TipNet Teams (manager tools)
+
+TipNet Teams is the business edition. A manager gets a **Teams** tab, just before Setup in the nav (`app/js/ui/team.js`, shown only when `teamsUnlocked()` from `app/js/entitlements.js` is true; on localhost, `?unlock=dev` turns it on) with two tools. See `MANAGER-GUIDE.md` for how to use them.
+
+- **Venue setup code.** The manager fills in the venue name, pay schedule, the current pay period and payday, jobs with rates and tip-outs. TipNet makes a link (`#join=...`), a QR code and a printable poster. Staff open the link or paste the code in Setup under **Join your venue**, see a preview, and set up (or add an establishment, or update the jobs and tip-outs of one with the same venue id). The code has no personal pay data. The venue is stored on the establishment as `workplace.venue = {id, name}`.
+- **Tip pool and tip sheets.** Four split methods (by hours, points x hours, equal, role %), worked out in whole cents by the largest-remainder method (`app/js/pool.js`) so each column adds up to the pool exactly. A sheet can be printed or shared as a link or QR (`#sheet=...`); a worker opens it, picks their name and logs their share on Tonight, with nothing saved until they tap Save night.
+
+How the codes work: compact JSON with short keys and a version field, as UTF-8 then base64url, in the URL fragment (`app/js/codec.js`, `venue.js`, `sheet.js`). The fragment never reaches a server and the app works offline. The app reads the fragment, removes it at once with `history.replaceState`, and validates it strictly (version, types, lengths, ranges, enums, real dates, no `__proto__`, `constructor` or `prototype` keys, capped sizes: 1,500 bytes for a venue code, 2,500 for a tip sheet). The QR code is an SVG built with `createElementNS` from the vendored qrcode-generator 1.4.4 (MIT) in `app/js/vendor/qrcode.js`, which is left out of lint and format checks.
+
+The manager's venue id, the last venue code made and the staff list (names, roles, points) are kept in `settings.team` on the manager's device and are included in backups.
+
+### Manager page and the Teams card
 The manager page is `app/teams/index.html` (open it at `/teams/` on your site). It is static: the pitch, what managers and staff get, Budget and the Staff Perks Credit with a worked example, the price, Buy buttons, "Manage subscription" and the FAQ. Its prices, Buy links and example numbers are read from `app/js/billing-config.js`, so they live in one place; while a product has no checkout link the button says "Coming soon". It is not precached by the service worker (see DECISIONS.md).
 
 In the app, a calm **Teams** card sits near the bottom of Setup while Teams is not unlocked on the device. It links to the manager page and holds the box for a team key (a key pasted in any key box is matched to its product). `app/js/entitlements.js` exports `budgetUnlocked()` and `teamsUnlocked()`, plain yes/no answers read from the license stored on the device (`?unlock=dev` on localhost opens both). An establishment that joined a venue stores `venue = { id, name }`; the Budget checkout link then carries `checkout[custom][venue_id]=<id>` so the venue can be credited.

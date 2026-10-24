@@ -112,6 +112,20 @@ TipNet Teams is the business edition of TipNet. For you, the staff member, the a
 ## Your venue and your pay
 If your venue uses TipNet Teams, your manager can hand you a QR poster to join the venue. **Your numbers stay private.** Your manager never sees what you earn, keep or spend, and joining does not share your nights, your paystub or your budget with the venue.
 
+## Joining your venue and your tip sheet
+
+**Join your venue.** If your manager gave you a TipNet Teams link or QR code, open it (or, in **Setup**, tap **Join your venue** and paste it). TipNet shows **Join (your venue)** first, with the pay schedule, payday, jobs and tip-outs your manager shared. Nothing is changed until you tap a button, and the link has no pay or personal information in it.
+
+- **First time in TipNet:** tap **Set up with these**. The guided setup starts with the schedule, jobs and tip-outs filled in. You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.
+- **Already set up:** tap **Add as a new establishment** (you can have 3 in the free app, 5 with Budget). If you already joined this venue, you'll see **Update jobs and tip-outs from (your venue)** instead. Tap it twice to confirm. Your own paystub numbers stay, and pay periods that have already ended keep the pay they were saved with.
+- **Not now** closes it and changes nothing.
+
+If a link doesn't work, TipNet says: "This link isn't a TipNet Teams venue code (or it's from a newer version). Nothing was changed."
+
+**Your tip sheet.** After a shift your manager may share a tip sheet link or QR code. Open it, tap your name, then **Open Tonight with my numbers**. Tonight opens for that date with your credit card tips, cash tips and hours filled in, and tip-outs unticked (the pool was already split). A note says which venue's tip sheet it came from. Look it over and tap **Save night**: nothing is saved until you do. If you already saved a night for that date, TipNet asks whether to add to it, replace it, or save it as a separate night, like always.
+
+Anyone with the sheet link sees everyone's share, so only open it from your manager.
+
 ## Budget and your venue's credit (your choice)
 **TipNet Budget** is the optional paid add-on described in section 6: $1.99 a month or $20 a year through Dec 31, 2026, then $3.99 a month or $30 a year from Jan 1, 2027.
 - If you have joined a venue, the Budget page shows one line near the prices: "<Venue> gets a small credit on its TipNet Teams bill when you subscribe." That is a thank-you from us to your venue. It does not change your price, and nothing comes out of your pay or tips.

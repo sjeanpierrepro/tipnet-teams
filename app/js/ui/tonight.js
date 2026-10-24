@@ -216,6 +216,31 @@ export function blankDraft(S, p) {
     date: tonightOf(S),
   };
 }
+/**
+ * TipNet Teams: opens Tonight at establishment w with a night from a manager's tip sheet filled in: its date, the person's
+ * CC tips and cash tips (cents), and hours (minutes) on the main job when that is paid by the hour. Tip-outs are
+ * unticked, because the pool was already split. Nothing is saved: the worker looks it over and taps Save night (the
+ * same-date question still applies). note says where it came from, on the form.
+ */
+export function openSheetNight(S, w, { date, cc, cash, minutes, note }) {
+  const p = w.profile;
+  const d = blankDraft(S, p);
+  d.date = date;
+  d.dateTouched = true;
+  d.cc = String(fromCents(cc));
+  d.cash = String(fromCents(cash));
+  const main = jobsOf(p)[0];
+  if (main && main.unit === 'hr' && minutes > 0)
+    d.pay[main.id] = Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
+  draftTipouts(d, p).forEach((r) => {
+    d.tipouts[r.id] = false;
+  });
+  d.sheetNote = note;
+  drafts.set(w.id, d);
+  if (S.workplaces.length > 1) picked = w.id;
+  S.settings.activeWorkplaceId = w.id;
+  save();
+}
 /** Keep a draft in step with Setup (a job removed or turned into other pay since): rows hold current jobs only, never twice. */
 export function syncDraft(d, p) {
   if (!d.cashOffTouched) d.cashOffPayroll = !!p.cashOffPayroll;
@@ -1874,6 +1899,7 @@ export function render(root) {
         many ? el('span', null, 'Tonight', el('span', { class: 'sr-only' }, ' at ' + w.name)) : 'Tonight',
       ),
       banner,
+      d.sheetNote ? el('p', { class: 'note', id: 'sheet-note' }, d.sheetNote) : null,
       stripCard(S, w),
       form,
       liveSummary,

@@ -18,6 +18,7 @@ import {
 } from './math.js';
 import { TIME_RE, UID_RE, cleanDays } from './ics.js';
 import { emptyBudget, migrateBudget } from './budget.js';
+import { cleanVenueRef, cleanTeam } from './venue.js';
 
 // 4 = v38 (establishments' tip-out people, pinned nights). migrate() reads every older version; data from a NEWER version
 // is never opened or saved over (see newerSchema and load).
@@ -36,6 +37,7 @@ const STATE_KEY = 'state';
  *   nights:     [{..., workplaceId}]  every night belongs to one restaurant.
  *   settings:   {theme:'auto'|'light'|'dark', lastTab, activeWorkplaceId, periodsFilter?, dayCutoffHour?, guidedDraft?,
  *                lastBackupAt?, backupNudgeUntil?, nightsSinceBackup?, backupNightsAt?, iosNoteSeen?, explanations? ('hide'; absent = show), explainPromptSeen?, installStepSeen?, wordingV38?, entitlement? (TipNet Budget license), teamsEntitlement? (TipNet Teams license),
+ *                team? (TipNet Teams manager: see cleanTeam in venue.js),
  *                reminder?: {time:'HH:MM', days:[0-6, Monday first], addedAt, uid, seq}}
  *               (shared by every restaurant)
  *   budget:     see budget.js (shared: bills are paid from all money; a goal may name the restaurant it is saved from, fundedBy).
@@ -435,7 +437,7 @@ function cleanSettings(x, ids) {
   const s = isObj(x) ? x : {};
   const out = {
     theme: ['auto', 'light', 'dark'].includes(s.theme) ? s.theme : 'auto',
-    lastTab: ['tonight', 'periods', 'budget', 'setup'].includes(s.lastTab) ? s.lastTab : 'tonight',
+    lastTab: ['tonight', 'periods', 'budget', 'setup', 'team'].includes(s.lastTab) ? s.lastTab : 'tonight',
     activeWorkplaceId: ids.includes(s.activeWorkplaceId) ? s.activeWorkplaceId : ids[0],
   };
   // Pay periods filter: 'all' or one restaurant (remembered; dropped when that restaurant is gone).
@@ -487,6 +489,9 @@ function cleanSettings(x, ids) {
   const count = (v) => Number.isInteger(v) && v >= 0 && v < 1e7;
   if (count(s.nightsSinceBackup)) out.nightsSinceBackup = s.nightsSinceBackup;
   if (count(s.backupNightsAt)) out.backupNightsAt = s.backupNightsAt;
+  // TipNet Teams manager data (this device's venue id, the last venue code made, the staff list), cleaned in venue.js
+  const team = cleanTeam(s.team);
+  if (team) out.team = team;
   out.wordingV38 = true; // set by the first migrate: old default names were renamed then, never again (see renameOldDefault)
   if (s.iosNoteSeen === true) out.iosNoteSeen = true; // the iPhone "Safari may clear data" note was shown once
   if (s.explanations === 'hide') out.explanations = 'hide'; // Setup > Explanations: Hide (absent means show)
@@ -506,16 +511,8 @@ function cleanSettings(x, ids) {
   return out;
 }
 
-/**
- * A joined venue, {id, name}, or null. id: 10 to 16 characters of letters, digits, _ and -. name: text, at most 40
- * characters (cut, never refused). Anything else is dropped, so a hand-made backup cannot put odd text in a checkout link.
- */
-export function cleanVenue(v) {
-  if (!isObj(v) || typeof v.id !== 'string' || typeof v.name !== 'string') return null;
-  if (!/^[A-Za-z0-9_-]{10,16}$/.test(v.id)) return null;
-  const name = v.name.trim().slice(0, 40);
-  return name ? { id: v.id, name } : null;
-}
+/** A joined venue, {id, name}, or null: the same validator as venue.js cleanVenueRef (one rule for every venue). */
+export const cleanVenue = cleanVenueRef;
 
 /** The profile fields, each coerced to a safe shape. startFallback: the start date used when it is missing or broken. */
 function cleanProfile(p, { startFallback }) {
@@ -802,7 +799,7 @@ function migrateUnsafe(input, today) {
     if (w.setupDone !== undefined && w.setupDone !== null) out.setupDone = !!w.setupDone;
     if (w.guideSkipped === true) out.guideSkipped = true; // "Skip guided setup": the full Setup page, not set up until the basics are in
     if (w.noDeductions === true) out.noDeductions = true; // "My paystub has no deductions"
-    const venue = cleanVenue(w.venue); // the venue (TipNet Teams) this establishment joined: kept when valid, dropped when not
+    const venue = cleanVenue(w.venue); // TipNet Teams: the venue this establishment joined, kept when valid, dropped when not
     if (venue) out.venue = venue;
     return out;
   });

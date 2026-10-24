@@ -1330,3 +1330,113 @@ h4 {
   display: flex;
   align-items: center;
 }
+/* ---------- TipNet Teams ---------- */
+/* Five tabs (Team shown): the short labels are used up to 440px wide, so nothing is cut off at 375px. */
+@media (max-width: 440px) {
+  .tabbar.tabs-5 button {
+    font-size: 13px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .tabbar.tabs-5 .tab-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tabbar.tabs-5 .tab-short {
+    display: inline;
+  }
+}
+/* A QR code is always black on white (whatever the theme), with its own quiet border, so cameras read it. */
+.qr {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.qr-box {
+  width: min(100%, 320px);
+  margin: 0 auto;
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: var(--s-2);
+}
+textarea[readonly] {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.table tfoot th {
+  border-top: 2px solid var(--border-strong);
+}
+/* what is printed (the venue poster, a tip sheet) is drawn into #print-area and shows only on paper */
+.print-area {
+  display: none;
+}
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body > :not(.print-area) {
+    display: none !important;
+  }
+  .print-area {
+    display: block;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-area * {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #000 !important;
+  }
+  .poster {
+    text-align: center;
+  }
+  .poster-title {
+    font: 700 56px/1.1 var(--font-display);
+    margin: 0 0 24px;
+  }
+  .poster-qr {
+    width: 100mm;
+    margin: 0 auto 16px;
+  }
+  .poster-qr .qr {
+    width: 100%;
+    background: #fff !important;
+  }
+  .poster-scan {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 20px;
+  }
+  .poster-steps {
+    display: inline-block;
+    text-align: left;
+    font-size: 20px;
+    line-height: 1.5;
+  }
+  .poster-small {
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .sheet-print h1 {
+    font-size: 28px;
+    margin: 0 0 6px;
+  }
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .print-table th,
+  .print-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #000;
+  }
+}

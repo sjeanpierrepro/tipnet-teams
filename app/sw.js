@@ -41,7 +41,15 @@ const SHELL = [
   'js/ui/common.js',
   'js/ui/budget.js',
   'js/ui/managers.js',
+  // TipNet Teams (manager tools, venue codes, tip sheets)
+  'js/codec.js',
+  'js/venue.js',
+  'js/pool.js',
+  'js/sheet.js',
+  'js/qr.js',
   'js/vendor/qrcode.js',
+  'js/ui/team.js',
+  'js/ui/join.js',
 ];
 
 self.addEventListener('install', (event) => {
