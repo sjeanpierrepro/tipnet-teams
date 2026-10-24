@@ -327,3 +327,71 @@ test('a half-typed tip pool and venue form stay while the app is open, across ta
     await page.close();
   }
 });
+
+test('names: an emoji with a joiner is fine; a tab is named plainly, and the saved list is never cut quietly', async () => {
+  const page = await boot({ seed: seed(), url: DEV });
+  try {
+    await openPool(page);
+    fill(page, '#pool-date', yesterday);
+    fill(page, '#pool-cc', '100');
+    person(page, 0, 'Chef \u{1F469}‍\u{1F373}', 'Kitchen', '5');
+    person(page, 1, 'Bo\tB', 'Server', '5');
+    await later();
+    assert.equal(page.$('#pool-result table'), null, 'nothing worked out while a name is wrong');
+    const t = page.text(page.$('#pool-result'));
+    assert.match(
+      t,
+      /The name “BoB” has a character TipNet can’t use \(a tab, a line break or an invisible character\)\. Retype it\./,
+    );
+    assert.doesNotMatch(t, /Chef/, 'the emoji name is fine');
+    assert.equal(page.state().settings.team?.staff, undefined, 'nothing saved while a name is wrong');
+    fill(page, '#pr-name-1', 'Bo');
+    await later();
+    assert.ok(page.$('#pool-result table'));
+    assert.deepEqual(
+      page.state().settings.team.staff.map((s) => s.name),
+      ['Chef \u{1F469}‍\u{1F373}', 'Bo'],
+    );
+    fill(page, '#pool-venue-name', 'The Corner Bar');
+    page.click(page.$('#pool-share-btn'));
+    assert.ok(page.$('#sheet-link'), 'the sheet with the emoji name shares');
+  } finally {
+    await page.close();
+  }
+});
+
+test('points: blank goes back to 1, shown and stored; there is no placeholder that means something else', async () => {
+  const page = await boot({ seed: seed(), url: DEV });
+  try {
+    await openPool(page);
+    page.$('#pool-method').value = 'points';
+    page.change(page.$('#pool-method'));
+    person(page, 0, 'Ann', 'Bar', '8');
+    assert.equal(page.$('#pr-points-0').value, '1');
+    assert.equal(page.$('#pr-points-0').getAttribute('placeholder'), null);
+    fill(page, '#pr-points-0', '');
+    page.change(page.$('#pr-points-0'));
+    assert.equal(page.$('#pr-points-0').value, '1');
+    await later();
+    assert.deepEqual(page.state().settings.team.staff, [{ name: 'Ann', role: 'Bar', points: 100 }]);
+  } finally {
+    await page.close();
+  }
+});
+
+test('share: a venue name a link cannot carry is named plainly, not called "too big"', async () => {
+  const page = await boot({ seed: seed(), url: DEV });
+  try {
+    await openPool(page);
+    fill(page, '#pool-date', yesterday);
+    fill(page, '#pool-cc', '100');
+    person(page, 0, 'Ann', 'Bar', '5');
+    fill(page, '#pool-venue-name', 'Corner\tBar');
+    await later();
+    page.click(page.$('#pool-share-btn'));
+    assert.equal(page.$('#pool-share-toobig'), null);
+    assert.match(page.text(page.$('#pool-share-error')), /^The venue name has a character TipNet can’t use/);
+  } finally {
+    await page.close();
+  }
+});

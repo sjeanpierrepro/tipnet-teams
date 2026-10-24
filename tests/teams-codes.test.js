@@ -349,6 +349,11 @@ test('helpers: names, dates, code reading', () => {
   assert.equal(nameIn('a\nb', 24), undefined);
   assert.equal(nameIn('a​b', 24), undefined);
   assert.equal(nameIn(null, 24), undefined);
+  assert.equal(nameIn('Chef 👩‍🍳', 24), 'Chef 👩‍🍳', 'a joiner inside an emoji is fine');
+  assert.equal(nameIn('👩🏽‍🍳', 24), '👩🏽‍🍳', 'after a skin tone too');
+  assert.equal(nameIn('Sam‍Ann', 24), undefined, 'a joiner between letters is invisible text');
+  assert.equal(nameIn('‍🍳', 24), undefined);
+  assert.equal(nameIn('Sam	Ann', 24), undefined, 'a pasted tab');
   assert.equal(dateIn('2026-10-09', parseISO), '2026-10-09');
   assert.equal(dateIn('2101-01-01', parseISO), undefined);
   assert.equal(dateIn(20261009, parseISO), undefined);

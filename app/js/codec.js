@@ -74,12 +74,30 @@ const badChar = (ch) => {
     n === 0xfeff
   );
 };
-/** A name: a string of 1..max characters (counted as people see them), trimmed, no control or direction characters. */
+// A zero-width joiner is allowed only inside an emoji sequence (between a pictograph, or its skin tone or emoji
+// presentation mark, and another pictograph), as in "👩‍🍳". Anywhere else it is invisible text and refused.
+const PICTO = /\p{Extended_Pictographic}/u;
+/** A pictograph, a skin tone modifier or the emoji presentation mark (what can come just before a joiner in an emoji). */
+const pictoEnd = (ch) => {
+  const n = ch.codePointAt(0);
+  return PICTO.test(ch) || n === 0xfe0f || (n >= 0x1f3fb && n <= 0x1f3ff);
+};
+const emojiJoiner = (cps, i) =>
+  cps[i] === '\u200d' && i > 0 && i < cps.length - 1 && pictoEnd(cps[i - 1]) && PICTO.test(cps[i + 1]);
+/** The characters of text TipNet can't use in a name (control, invisible and direction characters). */
+export const badChars = (text) => {
+  const cps = Array.from(String(text));
+  return cps.filter((ch, i) => badChar(ch) && !emojiJoiner(cps, i));
+};
+/**
+ * A name: a string of 1..max characters (counted as code points), trimmed, no control, invisible or direction
+ * characters (a zero-width joiner inside an emoji is fine).
+ */
 export function nameIn(v, max) {
-  if (typeof v !== 'string' || v.length > max * 2) return undefined;
+  if (typeof v !== 'string' || v.length > max * 4) return undefined;
   const t = v.trim();
   const len = Array.from(t).length;
-  return len >= 1 && len <= max && !Array.from(t).some(badChar) ? t : undefined;
+  return len >= 1 && len <= max && !badChars(t).length ? t : undefined;
 }
 /** An ISO date (a real calendar day) in the years 2000..2100. */
 export function dateIn(v, parse) {

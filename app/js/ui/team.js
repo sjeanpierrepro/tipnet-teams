@@ -44,6 +44,7 @@ import {
 } from '../pool.js';
 import { encodeSheet, sheetLink, TOO_BIG_SHEET, SHARE_WARNING, METHOD_TEXT } from '../sheet.js';
 import { qrSvg } from '../qr.js';
+import { badChars } from '../codec.js';
 import {
   el,
   clear,
@@ -705,9 +706,12 @@ function poolSection(S) {
       .map((r) => ({
         name: r.name.trim(),
         role: r.role.trim(),
-        points: hundredthsFromText(r.points, 1000).hundredths,
+        points: pointsOf(r).hundredths,
       }))
       .filter((r) => r.name);
+    // a name or role TipNet can't use is named on screen (read); the saved list waits until it is fixed, so nothing
+    // is ever dropped from it quietly
+    if (list.some((r) => textProblem(r.name) || textProblem(r.role) || r.points == null)) return;
     const keep = cleanStaff(list);
     const tt = team();
     if (JSON.stringify(tt.staff || []) === JSON.stringify(keep)) return;
@@ -717,6 +721,21 @@ function poolSection(S) {
   }, 500);
 
   const roleKey = (r) => r.trim().toLowerCase();
+  /** Blank points mean the default, 1 (the box is filled back with 1 when it is left). */
+  const pointsOf = (r) =>
+    String(r.points).trim() === '' ? { hundredths: 100 } : hundredthsFromText(r.points, 1000);
+  /** What is wrong with a name or role's characters, in words, or ''. */
+  const textProblem = (s) =>
+    badChars(s.trim()).length
+      ? 'has a character TipNet can’t use (a tab, a line break or an invisible character). Retype it.'
+      : '';
+  /** A name as it can be shown in a message (without the characters that are the problem). */
+  const shown = (s) => {
+    const bad = new Set(badChars(s));
+    return Array.from(s.trim())
+      .filter((ch) => !bad.has(ch))
+      .join('');
+  };
   const rolesInUse = () => {
     const seen = new Map();
     P.rows.forEach((r) => {
@@ -741,9 +760,11 @@ function poolSection(S) {
       if (!hasAny) return; // a blank row is ignored
       const who = r.name.trim() || 'Row ' + (i + 1);
       if (!r.name.trim()) errors.push('Row ' + (i + 1) + ' needs a name.');
+      if (textProblem(r.name)) errors.push('The name “' + shown(r.name) + '” ' + textProblem(r.name));
+      if (textProblem(r.role)) errors.push('The role “' + shown(r.role) + '” ' + textProblem(r.role));
       const m = minutesFromText(r.hours);
       if (m.error) errors.push('Hours for ' + who + ': ' + m.error);
-      const pts = P.method === 'points' ? hundredthsFromText(r.points, 1000) : { hundredths: 100 };
+      const pts = P.method === 'points' ? pointsOf(r) : { hundredths: 100 };
       if (pts.error) errors.push('Points for ' + who + ': ' + pts.error);
       rows.push({
         name: r.name.trim(),
@@ -841,8 +862,19 @@ function poolSection(S) {
       encodeSheet(sheetOf(last));
       url = sheetLink(sheetOf(last), location);
     } catch (e) {
+      // say what is wrong: too big for a link, or something in it a link can't carry
+      const tooBig = e && e.message === 'too-big';
+      const why = tooBig
+        ? TOO_BIG_SHEET
+        : textProblem(venueName())
+          ? 'The venue name ' + textProblem(venueName())
+          : 'This sheet can’t be shared as a link. Check the venue name, the names and the night above.';
       shareHost.append(
-        el('p', { class: 'field-error', role: 'alert', id: 'pool-share-toobig' }, TOO_BIG_SHEET),
+        el(
+          'p',
+          { class: 'field-error', role: 'alert', id: tooBig ? 'pool-share-toobig' : 'pool-share-error' },
+          why,
+        ),
       );
       return;
     }
@@ -1010,7 +1042,7 @@ function poolSection(S) {
         spellcheck: 'false',
         placeholder: 'e.g. 7:30',
       });
-      const pts = moneyInput({ id: 'pr-points-' + i, value: r.points, placeholder: '1' });
+      const pts = moneyInput({ id: 'pr-points-' + i, value: r.points });
       const rm = el(
         'button',
         {
@@ -1038,6 +1070,13 @@ function poolSection(S) {
       });
       pts.addEventListener('input', () => {
         r.points = pts.value;
+        saveStaff();
+        later();
+      });
+      // left blank: back to the default, 1, shown and stored
+      pts.addEventListener('change', () => {
+        if (pts.value.trim() !== '') return;
+        pts.value = r.points = '1';
         saveStaff();
         later();
       });
