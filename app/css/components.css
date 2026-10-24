@@ -1009,6 +1009,13 @@ details > summary.btn-link {
   text-decoration: none;
   color: inherit;
 }
+/* The manager page, Privacy and Terms: the brand link and the footer links are full 44px tap targets. */
+.doc-page a.brand,
+.doc-page .app-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+}
 
 /* ---------- fieldsets (Setup, Tonight) and the example view (Tonight, before setup) ---------- */
 fieldset.field {
