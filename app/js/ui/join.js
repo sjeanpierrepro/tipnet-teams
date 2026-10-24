@@ -477,7 +477,7 @@ export function render(root) {
     el(
       'div',
       { class: 'stack', id: 'link-bad' },
-      el('h1', { tabindex: '-1' }, 'TipNet Teams link'),
+      el('h1', { tabindex: '-1', id: 'link-bad-h1' }, 'TipNet Teams link'),
       el(
         'section',
         { class: 'card stack' },

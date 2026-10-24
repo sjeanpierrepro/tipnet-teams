@@ -146,3 +146,23 @@ test('a link that reads but cannot be shown gives the plain bad-link screen, nev
     await page.close();
   }
 });
+
+test('while a Join or Tip sheet screen shows, no tab is selected and the screen is named by its heading', async () => {
+  const page = await boot({ seed: setUp() });
+  try {
+    await open(page, '#join=' + encodeVenue(venue()));
+    assert.equal(page.$('#tabs [aria-selected="true"]'), null);
+    assert.equal(page.$('#app').getAttribute('aria-labelledby'), 'join-h1');
+    page.click(page.$('#join-not-now'));
+    assert.ok(page.$('#tabs [aria-selected="true"]'), 'a tab is selected again');
+    assert.match(page.$('#app').getAttribute('aria-labelledby'), /^tab-/);
+    await open(page, '#sheet=' + encodeSheet(sheet()));
+    assert.equal(page.$('#app').getAttribute('aria-labelledby'), 'sheet-h1');
+    assert.equal(page.$('#tabs [aria-selected="true"]'), null);
+    page.click(page.$('#sheet-not-now'));
+    await open(page, '#sheet=nonsense');
+    assert.equal(page.$('#app').getAttribute('aria-labelledby'), 'link-bad-h1');
+  } finally {
+    await page.close();
+  }
+});

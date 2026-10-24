@@ -187,13 +187,22 @@ function render() {
     return;
   }
   root.setAttribute('aria-labelledby', 'tab-' + current);
+  // while a venue link or tip sheet waits for an answer no tab is the one shown (tabIndex stays, for the keyboard)
+  const linkShown = !!join.pendingLink();
+  document
+    .querySelectorAll('#tabs [data-tab]')
+    .forEach((t) => t.setAttribute('aria-selected', String(!linkShown && t.dataset.tab === current)));
   keepFocus(root, () => {
     clear(root);
     try {
       if (storage.recoveryInfo()) throw new Error('saved data could not be read'); // errorScreen explains and offers the copy
       // a venue link or tip sheet that was opened or pasted waits for an answer (nothing is changed before that)
-      if (join.pendingLink()) join.render(root);
-      else SCREENS[current].render(root);
+      if (join.pendingLink()) {
+        join.render(root);
+        // the Join or Tip sheet screen is not any tab: the screen is named by its own heading
+        const h = root.querySelector('h1[id]');
+        if (h) root.setAttribute('aria-labelledby', h.id);
+      } else SCREENS[current].render(root);
       if (!join.pendingLink() && (current === 'tonight' || current === 'setup')) {
         // Tonight: "You've logged 10 nights since your last backup" first; never both reminders at once.
         // Otherwise "Last backup: never. Save a backup file" once there are 5+ real nights (Tonight and Setup).
