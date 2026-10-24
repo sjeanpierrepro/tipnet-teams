@@ -260,16 +260,20 @@ test('providerInfo: names, privacy links and portal per provider; off means the 
   }
 });
 
-test('CSP on the app, Privacy and Terms allows exactly the two payment APIs', () => {
+test('CSP: the app, Privacy and Terms may call Lemon Squeezy only; the manager page calls nothing outside', () => {
   for (const f of ['index', 'privacy', 'terms']) {
     const html = readFileSync(new URL(`../app/${f}.html`, import.meta.url), 'utf8');
     const m = html.match(/connect-src ([^;"]*)/);
-    assert.deepEqual(m[1].trim().split(/\s+/), [
-      "'self'",
-      'https://api.lemonsqueezy.com',
-      'https://api.polar.sh',
-    ]);
+    assert.deepEqual(m[1].trim().split(/\s+/), ["'self'", 'https://api.lemonsqueezy.com']);
   }
+  const landing = readFileSync(new URL('../app/teams/index.html', import.meta.url), 'utf8');
+  assert.deepEqual(
+    landing
+      .match(/connect-src ([^;"]*)/)[1]
+      .trim()
+      .split(/\s+/),
+    ["'self'"],
+  );
 });
 
 test('the shipped billing-config.js turns payments on through Lemon Squeezy; Polar still reads from a config', async () => {

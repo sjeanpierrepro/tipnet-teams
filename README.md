@@ -115,7 +115,7 @@ When you change any file in `app/`, also change the `VERSION` line at the top of
 
 ## Privacy
 
-Your numbers stay on your device. A Content Security Policy in `app/index.html` makes the browser enforce that TipNet only talks to its own site. If you use the optional Budget add-on, the app sends only your license key and a random device name to Lemon Squeezy, the payment provider (once when you activate the key, and about once a day to check it is still valid). Your pay data and budget never leave your device.
+Your numbers stay on your device. A Content Security Policy in `app/index.html` makes the browser enforce that TipNet only talks to its own site and to Lemon Squeezy (`api.lemonsqueezy.com`, for license checks); the manager page talks to nothing outside its own site. When you enter a Budget or Teams key, the app sends only your license key and a random device name to Lemon Squeezy, the payment provider (once when you activate the key, and about once a day to check it is still valid). Your pay data and budget never leave your device.
 
 ## Legal
 

@@ -49,8 +49,9 @@ export const BILLING = {
 };
 
 /*
- * POLAR (not used, kept only so the code that reads it stays tested). Polar sells Budget only. To use it instead, replace
- * the block above with:
+ * POLAR (not used, kept only so the code that reads it stays tested). Polar sells Budget only. Switching also needs
+ * https://api.polar.sh back in connect-src on the four pages (index, privacy, terms, teams/index), and a VERSION bump in
+ * sw.js. To use it instead, replace the block above with:
  *
  * export const BILLING = {
  *   provider: 'polar',
