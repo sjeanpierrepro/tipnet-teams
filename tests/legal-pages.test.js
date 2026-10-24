@@ -29,26 +29,47 @@ const POLAR_CFG = {
   benefitId: 'b74169ed-9c5f-4dab-96c9-d1a9dbacd974',
 };
 
-test('legal pages: markup defaults say Polar (the shipped provider since tipnet-v43) and carry the fill hooks', () => {
+test('legal pages: markup defaults say Lemon Squeezy (the shipped provider) and carry the fill hooks', () => {
   for (const name of pages) {
     const html = readFileSync(new URL(`../app/${name}.html`, import.meta.url), 'utf8');
-    assert.match(html, /<span data-provider-name>Polar<\/span>/);
-    // Lemon Squeezy only in the CSP (the commented alternative), never in the text people read
-    assert.doesNotMatch(html.replace(/https:\/\/api\.lemonsqueezy\.com/g, ''), /Lemon Squeezy|lemonsqueezy/i);
+    assert.match(html, /<span data-provider-name>Lemon Squeezy<\/span>/);
+    // Polar only in the CSP (unused code path), never in the text people read
+    assert.doesNotMatch(html.replace(/https:\/\/api\.polar\.sh/g, ''), /Polar|polar\.sh/i);
+    // every Lemon Squeezy mention is fillable
     assert.doesNotMatch(
       html
-        .replace(/<span data-provider-name>Polar<\/span>/g, '')
+        .replace(/<span data-provider-name>Lemon Squeezy<\/span>/g, '')
         .replace(/<span data-provider-cancel>[^<]*<\/span>/g, '')
-        .replace(/https:\/\/(api\.)?polar\.sh[^"\s<]*/g, '')
-        .replace(/polar\.sh\/legal\/privacy/g, ''),
-      /Polar/,
-      'every Polar mention is fillable',
+        .replace(/https:\/\/(api\.|www\.)?lemonsqueezy\.com[^"\s<]*/g, '')
+        .replace(/lemonsqueezy\.com\/privacy/g, ''),
+      /Lemon Squeezy|lemonsqueezy/i,
+      'every provider mention is fillable',
     );
+    assert.match(html, /<title>[^<]*TipNet Teams<\/title>/);
+    assert.match(html, /Last updated: October 24, 2026/);
+    assert.doesNotMatch(html, /tipmynet\.com/);
   }
   const priv = readFileSync(new URL('../app/privacy.html', import.meta.url), 'utf8');
-  assert.match(priv, /href="https:\/\/polar\.sh\/legal\/privacy"[^>]*data-provider-privacy/);
+  assert.match(priv, /href="https:\/\/www\.lemonsqueezy\.com\/privacy"[^>]*data-provider-privacy/);
   const terms = readFileSync(new URL('../app/terms.html', import.meta.url), 'utf8');
-  assert.match(terms, /<span data-provider-cancel>the Polar customer portal<\/span>/);
+  assert.match(terms, /<span data-provider-cancel>Lemon Squeezy's customer portal<\/span>/);
+});
+
+test('legal pages: business customers, staff, the Staff Perks Credit terms, no job requirement', () => {
+  const terms = readFileSync(new URL('../app/terms.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+  const priv = readFileSync(new URL('../app/privacy.html', import.meta.url), 'utf8').replace(/\s+/g, ' ');
+  for (const t of [terms, priv]) assert.match(t, /venue/i);
+  assert.match(terms, /25%/);
+  assert.match(terms, /never paid as cash/);
+  assert.match(terms, /only while the venue's TipNet Teams subscription is active/);
+  assert.match(terms, /count only, never as names/);
+  assert.match(terms, /can never require a staff member to subscribe as a condition of a job/);
+  assert.match(terms, /never be deducted from a staff member's wages or tips/);
+  assert.match(terms, /Staff are told at checkout that their venue gets a small credit/);
+  assert.match(priv, /worked out and kept on the manager's own device/);
+  assert.match(priv, /never sees what a staff member earns/);
+  assert.match(terms, /not tax, legal, payroll or financial advice/);
+  assert.match(terms, /merchant of record/);
 });
 
 test('legal pages: fillProvider names the provider in use, with its privacy link', async () => {
@@ -71,7 +92,7 @@ test('legal pages: fillProvider names the provider in use, with its privacy link
       d.els.name.map((e) => e.textContent),
       ['Lemon Squeezy', 'Lemon Squeezy'],
     );
-    assert.equal(d.els.cancel[0].textContent, "Lemon Squeezy's My Orders page");
+    assert.equal(d.els.cancel[0].textContent, "Lemon Squeezy's customer portal");
     assert.equal(d.els.privacy[0].href, 'https://www.lemonsqueezy.com/privacy');
   }
 });

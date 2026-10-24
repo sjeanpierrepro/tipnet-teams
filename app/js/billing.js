@@ -140,7 +140,7 @@ export function providerInfo(rawConfig = BILLING) {
     privacyLabel: 'lemonsqueezy.com/privacy',
     // portalUrl may hold the store's own billing page (https://STORE.lemonsqueezy.com/billing); My Orders works for any store.
     manageUrl: config.portalUrl.startsWith('https://') ? config.portalUrl : LS_PORTAL,
-    cancelWhere: "Lemon Squeezy's My Orders page",
+    cancelWhere: "Lemon Squeezy's customer portal",
   };
 }
 
