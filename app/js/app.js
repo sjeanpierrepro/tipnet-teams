@@ -18,6 +18,8 @@ import {
   updateAction,
 } from './ui/common.js';
 import { budgetVisible, reloadConfig } from './billing.js';
+import { teamsUnlocked } from './entitlements.js';
+import { takeFragment } from './codec.js';
 import {
   restoreFromCode,
   NEWER_BACKUP_MSG,
@@ -31,14 +33,19 @@ import * as tonight from './ui/tonight.js';
 import * as periods from './ui/periods.js';
 import * as setup from './ui/setup.js';
 import * as budget from './ui/budget.js';
+import * as team from './ui/team.js';
+import * as join from './ui/join.js';
 
-const SCREENS = { tonight, periods, budget, setup };
-const TABS = ['tonight', 'periods', 'budget', 'setup'];
+const SCREENS = { tonight, periods, budget, setup, team };
+const TABS = ['tonight', 'periods', 'budget', 'setup', 'team'];
 let current = 'tonight';
 
 /** Budget stays out of sight while payments are off, unless this device already has it unlocked. */
 const budgetShown = () => budgetVisible((storage.getState().settings || {}).entitlement);
-const visibleTabs = () => TABS.filter((t) => t !== 'budget' || budgetShown());
+/** The Team tab (manager tools) is only there when TipNet Teams is unlocked on this device. */
+const teamShown = () => teamsUnlocked();
+const visibleTabs = () =>
+  TABS.filter((t) => (t !== 'budget' || budgetShown()) && (t !== 'team' || teamShown()));
 // "See what's inside" on a "TipNet Budget" card opens the Budget preview even while its tab is hidden (payments off).
 // It lasts until another tab is picked.
 let preview = false;
@@ -47,6 +54,11 @@ function syncTabs() {
   const shown = budgetShown();
   const b = document.querySelector('#tabs [data-tab="budget"]');
   if (b) b.hidden = !shown;
+  const tm = document.querySelector('#tabs [data-tab="team"]');
+  if (tm) tm.hidden = !teamShown();
+  // five tabs on a phone are narrow: the short labels are used (css)
+  const nav = document.getElementById('tabs');
+  if (nav) nav.classList.toggle('tabs-5', visibleTabs().length >= 5);
   return shown;
 }
 
@@ -165,13 +177,19 @@ function render() {
     go('tonight');
     return;
   }
+  if (current === 'team' && !teamShown()) {
+    go('tonight');
+    return;
+  }
   root.setAttribute('aria-labelledby', 'tab-' + current);
   keepFocus(root, () => {
     clear(root);
     try {
       if (storage.recoveryInfo()) throw new Error('saved data could not be read'); // errorScreen explains and offers the copy
-      SCREENS[current].render(root);
-      if (current === 'tonight' || current === 'setup') {
+      // a venue link or tip sheet that was opened or pasted waits for an answer (nothing is changed before that)
+      if (join.pendingLink()) join.render(root);
+      else SCREENS[current].render(root);
+      if (!join.pendingLink() && (current === 'tonight' || current === 'setup')) {
         // Tonight: "You've logged 10 nights since your last backup" first; never both reminders at once.
         // Otherwise "Last backup: never. Save a backup file" once there are 5+ real nights (Tonight and Setup).
         const nudge = (current === 'tonight' && nightsBackupCard()) || backupReminder();
@@ -186,6 +204,7 @@ function render() {
       // On Pay periods the locked Budget goal card takes its place (one locked card per page, owner request).
       if (
         current !== 'budget' &&
+        !join.pendingLink() &&
         !(current === 'setup' && setup.guidedOnScreen()) &&
         !(current === 'periods' && root.querySelector('#goal-card.upsell'))
       ) {
@@ -213,11 +232,13 @@ function go(tab, opts = {}) {
   if (current === 'setup' && tab !== 'setup' && setup.confirmLeave(() => go(tab, opts))) return false;
   if (tab !== 'budget') preview = false;
   else if (asPreview) preview = true;
-  if (!SCREENS[tab] || (tab === 'budget' && !budgetOpen())) tab = 'tonight';
+  if (!SCREENS[tab] || (tab === 'budget' && !budgetOpen()) || (tab === 'team' && !teamShown()))
+    tab = 'tonight';
   if (tab !== current) {
     try {
       periods.reset();
       budget.reset();
+      team.reset();
     } catch (e) {
       /* reset only clears screen memory */
     }
@@ -330,7 +351,15 @@ function setupServiceWorker() {
     });
 }
 
+/** A venue link or tip sheet link in the address: read it and take it out of the address at once, before anything loads. */
+function readLink() {
+  const frag = takeFragment(window);
+  if (frag) join.openFragment(frag);
+  return !!frag;
+}
+
 async function boot() {
+  readLink(); // first: the fragment never stays in the address bar, history or a reload
   const state = await storage.load();
   applyTheme(state.settings.theme);
   applyExplanations(state.settings.explanations);
@@ -339,7 +368,7 @@ async function boot() {
   // After Erase everything / Restore. Not set up (erased, or a code with nothing in it): back to Setup, as on a first
   // launch. to: where a working state lands (a restore from the first-launch Setup goes to Tonight).
   bus.stateReplaced = ({ to } = {}) => {
-    [periods.reset, budget.reset, tonight.resetDraft, setup.reset].forEach((f) => {
+    [periods.reset, budget.reset, tonight.resetDraft, setup.reset, team.reset, join.reset].forEach((f) => {
       try {
         f();
       } catch (e) {
@@ -350,6 +379,11 @@ async function boot() {
     else if (to) go(to);
     else render();
   };
+  bus.openLink = (p) => {
+    join.openParsed(p);
+    render();
+    window.scrollTo(0, 0);
+  };
   bus.startSetup = () => {
     restoreRequest.open = false;
     go('setup');
@@ -358,6 +392,13 @@ async function boot() {
   };
   wireTabs();
   trackEdits(document.getElementById('app'));
+  // A link opened while TipNet is already open (it is only the fragment that changes): the same, without a reload.
+  window.addEventListener('hashchange', () => {
+    if (readLink()) {
+      render();
+      window.scrollTo(0, 0);
+    }
+  });
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     setInstallPrompt(e);

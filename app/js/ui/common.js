@@ -478,7 +478,13 @@ export function debounce(fn, ms = 300) {
 
 /* ---------- app bus (set by app.js) ---------- */
 /** startSetup: open Setup (the guided flow when not set up) with focus on its first field. */
-export const bus = { go: () => {}, rerender: () => {}, stateReplaced: () => {}, startSetup: () => {} };
+export const bus = {
+  go: () => {},
+  rerender: () => {},
+  stateReplaced: () => {},
+  startSetup: () => {},
+  openLink: () => {}, // TipNet Teams: show a venue code or tip sheet that was opened or pasted (ui/join.js)
+};
 
 /**
  * Shown on Tonight, Pay periods and Budget until TipNet is set up (see isSetUp in storage.js): no estimate, no entry form.
