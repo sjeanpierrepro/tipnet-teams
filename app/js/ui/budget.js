@@ -2832,18 +2832,6 @@ export function subscriptionCard(product = 'budget') {
   );
 }
 
-/** One quiet line for the Setup screen, only for people who have a TipNet Teams subscription. */
-export function teamsSubscriptionLine() {
-  if (!entOf('teams')) return null;
-  return el(
-    'p',
-    { class: 'hint' },
-    'TipNet Teams subscription: ' +
-      (unlockedOf('teams') ? 'active' : 'not active') +
-      '. Backup codes do not include your license key.',
-  );
-}
-
 /** One quiet line for the Setup screen, only for people who have a subscription. */
 export function subscriptionLine() {
   if (!ent()) return null;

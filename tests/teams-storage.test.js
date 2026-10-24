@@ -64,11 +64,6 @@ test('a venue name over 40 characters is cut to 40, not dropped (one rule with P
   assert.deepEqual(S.workplaces[0].venue, { id: ID, name: 'x'.repeat(40) });
 });
 
-test('a venue name over 40 characters is cut to 40, not dropped (one rule with Phase 1)', () => {
-  const S = real((x) => (x.workplaces[0].venue = { id: ID, name: 'x'.repeat(41) }));
-  assert.deepEqual(S.workplaces[0].venue, { id: ID, name: 'x'.repeat(40) });
-});
-
 test('settings.team keeps the venue id, the last venue code made and the staff list; junk is dropped', () => {
   const S = real(
     (x) =>
