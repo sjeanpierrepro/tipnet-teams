@@ -479,6 +479,7 @@ function venueSection() {
       });
       nm.addEventListener('input', () => {
         j.name = nm.value;
+        rm.setAttribute('aria-label', 'Remove ' + jobLabel(j));
         touch();
       });
       rate.addEventListener('input', () => {
@@ -582,6 +583,7 @@ function venueSection() {
       });
       nm.addEventListener('input', () => {
         t.who = nm.value;
+        rm.setAttribute('aria-label', 'Remove ' + (t.who.trim() || presetName(TIPOUT_PRESETS, t.k)));
         touch();
       });
       mode.addEventListener('change', () => {
@@ -1012,6 +1014,7 @@ function poolSection(S) {
       );
       name.addEventListener('input', () => {
         r.name = name.value;
+        rm.setAttribute('aria-label', 'Remove ' + (r.name.trim() || 'row ' + (i + 1)));
         saveStaff();
         later();
       });

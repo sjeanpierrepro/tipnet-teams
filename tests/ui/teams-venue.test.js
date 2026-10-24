@@ -75,7 +75,9 @@ test('venue code: a good form makes a link, a QR code, Copy and the poster; the 
     assert.equal(v.start, start);
     assert.equal(v.delay, 5);
     assert.deepEqual(v.jobs, [{ k: 'bartender', name: 'Bartender', rate: 1200, unit: 'hr' }]);
-    assert.deepEqual(v.tipouts, [{ k: 'barback', who: 'Barback', mode: 'pctTips', value: 1500, from: 'cash' }]);
+    assert.deepEqual(v.tipouts, [
+      { k: 'barback', who: 'Barback', mode: 'pctTips', value: 1500, from: 'cash' },
+    ]);
     assert.match(v.id, VENUE_ID_RE);
     assert.equal(v.id.length, 12);
     // QR code: an svg with the module count, black on white
@@ -84,7 +86,10 @@ test('venue code: a good form makes a link, a QR code, Copy and the poster; the 
     assert.ok(page.$('path', svg).getAttribute('d').startsWith('M4 4'));
     // Copy
     let copied = '';
-    Object.defineProperty(page.win.navigator, 'clipboard', { value: { writeText: async (t) => (copied = t) }, configurable: true });
+    Object.defineProperty(page.win.navigator, 'clipboard', {
+      value: { writeText: async (t) => (copied = t) },
+      configurable: true,
+    });
     page.click(page.$('#venue-copy'));
     await page.settle();
     assert.equal(copied, link);
@@ -100,7 +105,10 @@ test('venue code: Share appears where navigator.share exists and shares the link
   const page = await boot({ seed: seed(), url: DEV });
   try {
     const shared = [];
-    Object.defineProperty(page.win.navigator, 'share', { value: async (d) => shared.push(d), configurable: true });
+    Object.defineProperty(page.win.navigator, 'share', {
+      value: async (d) => shared.push(d),
+      configurable: true,
+    });
     page.tab('team');
     await fillVenue(page);
     page.click(page.must(page.$('#venue-share'), 'share'));
@@ -162,7 +170,11 @@ test('venue code: calendar schedules take the end date from the calendar; jobs a
     assert.match(page.text(page.$('#venue-end-hint')), /calendar sets the end date/);
     page.$('#venue-freq').value = '7';
     page.change(page.$('#venue-freq'));
-    assert.equal(page.$('#venue-end').value, '2026-10-11', 'a weekly schedule fills the end the way Setup does');
+    assert.equal(
+      page.$('#venue-end').value,
+      '2026-10-11',
+      'a weekly schedule fills the end the way Setup does',
+    );
     assert.equal(page.$('#venue-end').disabled, false);
     // jobs
     assert.equal(page.$$('select[id^="vj-kind-"]').length, 1);

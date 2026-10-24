@@ -60,7 +60,11 @@ test('Team tab: arrow keys skip it while it is hidden, and reach it when unlocke
   try {
     page.tab('setup');
     page.key(page.$('#tabs [data-tab="setup"]'), 'ArrowRight');
-    assert.equal(page.$('#tabs [aria-selected="true"]').dataset.tab, 'tonight', 'wraps past the hidden Team tab');
+    assert.equal(
+      page.$('#tabs [aria-selected="true"]').dataset.tab,
+      'tonight',
+      'wraps past the hidden Team tab',
+    );
   } finally {
     await page.close();
   }
@@ -76,9 +80,16 @@ test('Team tab: arrow keys skip it while it is hidden, and reach it when unlocke
 
 test('phone nav: five tabs fit at 375px (short labels and smaller type under 440px)', () => {
   const css = readFileSync(path.join(APP_DIR, 'css/components.css'), 'utf8');
-  const block = /@media \(max-width: 440px\) \{[^@]*?\.tabbar\.tabs-5 button[\s\S]*?\.tabbar\.tabs-5 \.tab-short[\s\S]*?\n\}/.exec(css);
+  const block =
+    /@media \(max-width: 440px\) \{[^@]*?\.tabbar\.tabs-5 button[\s\S]*?\.tabbar\.tabs-5 \.tab-short[\s\S]*?\n\}/.exec(
+      css,
+    );
   assert.ok(block, 'a rule for .tabbar.tabs-5 under 440px');
-  assert.match(block[0], /\.tabs-5 \.tab-full[\s\S]*clip/, 'the long "Pay periods" label is hidden for the short one');
+  assert.match(
+    block[0],
+    /\.tabs-5 \.tab-full[\s\S]*clip/,
+    'the long "Pay periods" label is hidden for the short one',
+  );
   assert.match(block[0], /\.tabs-5 \.tab-short \{\s*display: inline/);
   const html = readFileSync(path.join(APP_DIR, 'index.html'), 'utf8');
   assert.match(html, /data-tab="team"[\s\S]*?hidden[\s\S]*?Team/);

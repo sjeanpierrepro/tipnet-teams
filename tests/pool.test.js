@@ -1,14 +1,25 @@
 // Tip pool math: every method, exact sums (largest remainder), ties, zero hours, role % errors.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitCents, computePool, minutesFromText, centsFromText, hundredthsFromText, hoursLabel } from '../app/js/pool.js';
+import {
+  splitCents,
+  computePool,
+  minutesFromText,
+  centsFromText,
+  hundredthsFromText,
+  hoursLabel,
+} from '../app/js/pool.js';
 
 const row = (name, minutes, o = {}) => ({ name, role: '', minutes, points: 100, ...o });
 const col = (res, f) => res.rows.map((r) => r[f]);
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 
 test('splitCents: always adds up, zero weight gets zero, ties go to the earlier row', () => {
-  assert.deepEqual(splitCents(100, [1, 1, 1]), [34, 33, 33], 'equal fractions: the first gets the spare cent');
+  assert.deepEqual(
+    splitCents(100, [1, 1, 1]),
+    [34, 33, 33],
+    'equal fractions: the first gets the spare cent',
+  );
   assert.deepEqual(splitCents(1, [1, 1, 1]), [1, 0, 0]);
   assert.deepEqual(splitCents(2, [1, 1, 1]), [1, 1, 0]);
   assert.deepEqual(splitCents(0, [3, 4]), [0, 0]);
@@ -72,16 +83,30 @@ test('by points × hours: weight is minutes times points; points 0 is a zero sha
     method: 'points',
     cc: 1000,
     cash: 0,
-    rows: [row('Bar', 60, { points: 200 }), row('Runner', 60, { points: 100 }), row('Host', 60, { points: 0 })],
+    rows: [
+      row('Bar', 60, { points: 200 }),
+      row('Runner', 60, { points: 100 }),
+      row('Host', 60, { points: 0 }),
+    ],
   });
   assert.deepEqual(col(r, 'cc'), [667, 333, 0]);
   assert.deepEqual(col(r, 'cash'), [0, 0, 0]);
-  const half = computePool({ method: 'points', cc: 900, cash: 0, rows: [row('A', 60, { points: 150 }), row('B', 60, { points: 150 })] });
+  const half = computePool({
+    method: 'points',
+    cc: 900,
+    cash: 0,
+    rows: [row('A', 60, { points: 150 }), row('B', 60, { points: 150 })],
+  });
   assert.deepEqual(col(half, 'cc'), [450, 450]);
 });
 
 test('equal: everyone who worked gets the same; ties go in list order', () => {
-  const r = computePool({ method: 'equal', cc: 1000, cash: 1, rows: [row('A', 30), row('B', 600), row('C', 5)] });
+  const r = computePool({
+    method: 'equal',
+    cc: 1000,
+    cash: 1,
+    rows: [row('A', 30), row('B', 600), row('C', 5)],
+  });
   assert.deepEqual(col(r, 'cc'), [334, 333, 333]);
   assert.deepEqual(col(r, 'cash'), [1, 0, 0]);
 });
@@ -100,7 +125,8 @@ test('by role %: shares must be 100, then by hours inside each role, exact sums'
   assert.equal(sum(col(r, 'cc')), 100001);
   assert.equal(sum(col(r, 'cash')), 7777);
   // runner: 10% of 100001 = 10000.1 -> the role gets 10000 (largest remainder across roles), Ed gets it all
-  const roleTotal = (role) => sum(r.rows.filter((x) => x.role.trim().toLowerCase() === role).map((x) => x.cc));
+  const roleTotal = (role) =>
+    sum(r.rows.filter((x) => x.role.trim().toLowerCase() === role).map((x) => x.cc));
   assert.equal(roleTotal('bartender') + roleTotal('server') + roleTotal('runner'), 100001);
   assert.ok(Math.abs(roleTotal('bartender') - 50000.5) <= 1);
   assert.ok(Math.abs(roleTotal('server') - 40000.4) <= 1);
@@ -117,7 +143,13 @@ test('by role %: errors say what is wrong', () => {
   assert.match(over.error, /100%/);
   const none = computePool({ method: 'role', cc: 100, cash: 0, rows, shares: {} });
   assert.match(none.error, /100%/);
-  const blank = computePool({ method: 'role', cc: 100, cash: 0, rows: [row('Ann', 60), rows[1]], shares: { server: 10000 } });
+  const blank = computePool({
+    method: 'role',
+    cc: 100,
+    cash: 0,
+    rows: [row('Ann', 60), rows[1]],
+    shares: { server: 10000 },
+  });
   assert.match(blank.error, /Give Ann a role/);
   const empty = computePool({
     method: 'role',
@@ -141,13 +173,22 @@ test('by role %: errors say what is wrong', () => {
 
 test('errors: nobody, every weight 0, no method', () => {
   assert.match(computePool({ method: 'hours', cc: 1, cash: 0, rows: [] }).error, /at least one person/);
-  assert.match(computePool({ method: 'hours', cc: 1, cash: 0, rows: [row('A', 0), row('B', 0)] }).error, /Nobody has any hours/);
-  assert.match(computePool({ method: 'equal', cc: 1, cash: 0, rows: [row('A', 0)] }).error, /Nobody has any hours/);
+  assert.match(
+    computePool({ method: 'hours', cc: 1, cash: 0, rows: [row('A', 0), row('B', 0)] }).error,
+    /Nobody has any hours/,
+  );
+  assert.match(
+    computePool({ method: 'equal', cc: 1, cash: 0, rows: [row('A', 0)] }).error,
+    /Nobody has any hours/,
+  );
   assert.match(
     computePool({ method: 'points', cc: 1, cash: 0, rows: [row('A', 60, { points: 0 })] }).error,
     /hours × points come to 0/,
   );
-  assert.match(computePool({ method: 'nope', cc: 1, cash: 0, rows: [row('A', 60)] }).error, /Pick how to split/);
+  assert.match(
+    computePool({ method: 'nope', cc: 1, cash: 0, rows: [row('A', 60)] }).error,
+    /Pick how to split/,
+  );
 });
 
 test('both pools 0 is fine: everyone gets $0', () => {
@@ -157,7 +198,12 @@ test('both pools 0 is fine: everyone gets $0', () => {
 });
 
 test('a person with only a cash pool or only a CC pool still gets exact sums', () => {
-  const r = computePool({ method: 'hours', cc: 0, cash: 10001, rows: [row('A', 100), row('B', 200), row('C', 300)] });
+  const r = computePool({
+    method: 'hours',
+    cc: 0,
+    cash: 10001,
+    rows: [row('A', 100), row('B', 200), row('C', 300)],
+  });
   assert.equal(sum(col(r, 'cash')), 10001);
   assert.deepEqual(col(r, 'cc'), [0, 0, 0]);
 });

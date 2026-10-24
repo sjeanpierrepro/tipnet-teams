@@ -31,7 +31,15 @@ test('a link is read, taken out of the address at once, and shown before anythin
     assert.match(t, /Door\s*\$15\.00 a shift/);
     assert.match(t, /Barback\s*15% of tips, from cash/);
     assert.match(t, /Host\s*\$20\.00 flat, through payroll/);
-    assert.ok(t.includes(new Date(v.start + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })));
+    assert.ok(
+      t.includes(
+        new Date(v.start + 'T00:00:00Z').toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        }),
+      ),
+    );
     // nothing changed or stored yet
     assert.equal(page.state().workplaces[0].venue, undefined);
     assert.equal(page.state().settings.guidedDraft, undefined);
@@ -166,7 +174,10 @@ test('existing establishments: "Add as a new establishment" starts its own guide
 });
 
 test('existing establishments: a name already taken gets a number', async () => {
-  const page = await boot({ seed: setUpState((S) => (S.workplaces[0].name = 'The Corner Bar')), url: joinUrl() });
+  const page = await boot({
+    seed: setUpState((S) => (S.workplaces[0].name = 'The Corner Bar')),
+    url: joinUrl(),
+  });
   try {
     page.click(page.$('#join-add'));
     assert.equal(page.state().workplaces[1].name, 'The Corner Bar 2');
@@ -178,7 +189,13 @@ test('existing establishments: a name already taken gets a number', async () => 
 const threePlaces = () =>
   setUpState((S) => {
     for (const i of [2, 3])
-      S.workplaces.push({ id: 'w' + i, name: 'Bar ' + i, profile: exampleProfile(today), calib: [], setupDone: true });
+      S.workplaces.push({
+        id: 'w' + i,
+        name: 'Bar ' + i,
+        profile: exampleProfile(today),
+        calib: [],
+        setupDone: true,
+      });
   });
 
 test('the limit is respected: 3 free, with the existing message, and nothing is added', async () => {
@@ -186,7 +203,10 @@ test('the limit is respected: 3 free, with the existing message, and nothing is 
   try {
     const add = page.$('#join-add');
     assert.equal(add.disabled, true);
-    assert.match(page.$('#wp-limit').textContent, /^You can have up to 3 establishments in the free app\. TipNet Budget \(coming soon\) will allow up to 5\./);
+    assert.match(
+      page.$('#wp-limit').textContent,
+      /^You can have up to 3 establishments in the free app\. TipNet Budget \(coming soon\) will allow up to 5\./,
+    );
     page.click(add);
     assert.equal(page.state().workplaces.length, 3);
   } finally {
@@ -250,13 +270,20 @@ test('the same venue id: offers an update (two taps), changes only jobs and tip-
     assert.equal(page.$('#join-add'), null, 'no second copy of the same venue');
     const btn = page.must(page.$('#join-update'), 'update button');
     assert.equal(btn.textContent, 'Update jobs and tip-outs from The Corner Bar');
-    assert.match(page.text(page.$('#join-screen')), /pay periods that have ended keep the pay they were saved with/);
+    assert.match(
+      page.text(page.$('#join-screen')),
+      /pay periods that have ended keep the pay they were saved with/,
+    );
     const before = clone(page.state());
     const lockedBefore = clone(before.nights[1]);
     assert.ok(lockedBefore.snap, 'the finished pay period is locked');
     page.click(btn);
     assert.match(btn.textContent, /Tap again to update Corner/);
-    assert.deepEqual(page.state().workplaces[0].profile.payTypes, before.workplaces[0].profile.payTypes, 'one tap changes nothing');
+    assert.deepEqual(
+      page.state().workplaces[0].profile.payTypes,
+      before.workplaces[0].profile.payTypes,
+      'one tap changes nothing',
+    );
     page.click(btn);
     await page.settle();
     const S = page.state();
@@ -286,9 +313,16 @@ test('the same venue id: offers an update (two taps), changes only jobs and tip-
     assert.equal(w.profile.periodStart, start);
     assert.equal(w.profile.deductions.length, before.workplaces[0].profile.deductions.length);
     // finished pay periods are exactly as they were
-    assert.deepEqual(S.nights.find((n) => n.id === 2), lockedBefore);
+    assert.deepEqual(
+      S.nights.find((n) => n.id === 2),
+      lockedBefore,
+    );
     assert.deepEqual(S.nights.find((n) => n.id === 1).snap, before.nights[0].snap);
-    assert.equal(S.nights.find((n) => n.id === 1).snap.pay[0].rate, 9, 'the locked night still has the rate it was saved with');
+    assert.equal(
+      S.nights.find((n) => n.id === 1).snap.pay[0].rate,
+      9,
+      'the locked night still has the rate it was saved with',
+    );
   } finally {
     await page.close();
   }
@@ -308,10 +342,7 @@ test('bad links: the plain message, nothing changed, OK goes back', async () => 
     try {
       assert.equal(page.win.location.hash, '', 'removed even when it is bad');
       const msg = page.text(page.$('#link-bad'));
-      assert.ok(
-        msg.includes(url.includes('#sheet') ? 'isn’t a TipNet Teams tip sheet' : BAD_LINK_MSG),
-        msg,
-      );
+      assert.ok(msg.includes(url.includes('#sheet') ? 'isn’t a TipNet Teams tip sheet' : BAD_LINK_MSG), msg);
       assert.equal(page.state().workplaces.length, 1);
       assert.equal(page.state().workplaces[0].venue, undefined);
       page.click(page.$('#link-bad-ok'));
@@ -320,13 +351,19 @@ test('bad links: the plain message, nothing changed, OK goes back', async () => 
       await page.close();
     }
   }
-  assert.equal(BAD_LINK_MSG, 'This link isn’t a TipNet Teams venue code (or it’s from a newer version). Nothing was changed.');
+  assert.equal(
+    BAD_LINK_MSG,
+    'This link isn’t a TipNet Teams venue code (or it’s from a newer version). Nothing was changed.',
+  );
 });
 
 test('a link with a prototype key is refused and pollutes nothing', async () => {
   const w = JSON.parse(Buffer.from(encodeVenue(venue()), 'base64url').toString('utf8'));
   const text = JSON.stringify(w).slice(0, -1) + ',"__proto__":{"polluted":"yes"}}';
-  const page = await boot({ seed: setUpState(), url: 'http://localhost/#join=' + Buffer.from(text).toString('base64url') });
+  const page = await boot({
+    seed: setUpState(),
+    url: 'http://localhost/#join=' + Buffer.from(text).toString('base64url'),
+  });
   try {
     assert.match(page.text(page.$('#link-bad')), /Nothing was changed/);
     assert.equal({}.polluted, undefined);
@@ -342,7 +379,10 @@ test('Setup > Join your venue: paste a link or a bare code; a bad paste says so'
     page.click(page.byText('button.fold-head', 'Join your venue'));
     fill(page, '#join-code', 'hello there');
     page.click(page.$('#join-go'));
-    assert.match(page.text(page.$('#join-code').parentNode.parentNode), /This link isn’t a TipNet Teams venue code/);
+    assert.match(
+      page.text(page.$('#join-code').parentNode.parentNode),
+      /This link isn’t a TipNet Teams venue code/,
+    );
     assert.equal(page.$('#join-screen'), null);
     fill(page, '#join-code', joinUrl());
     page.click(page.$('#join-go'));

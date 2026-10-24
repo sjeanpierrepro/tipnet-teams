@@ -60,7 +60,9 @@ test('venue ids: 12 characters of base64url, different every time', () => {
   ids.forEach((i) => assert.match(i, /^[A-Za-z0-9_-]{12}$/));
   assert.ok(VENUE_ID_RE.test('a'.repeat(10)) && VENUE_ID_RE.test('a'.repeat(16)));
   assert.ok(
-    !VENUE_ID_RE.test('a'.repeat(9)) && !VENUE_ID_RE.test('a'.repeat(17)) && !VENUE_ID_RE.test('abc def ghij'),
+    !VENUE_ID_RE.test('a'.repeat(9)) &&
+      !VENUE_ID_RE.test('a'.repeat(17)) &&
+      !VENUE_ID_RE.test('abc def ghij'),
   );
 });
 
@@ -114,7 +116,10 @@ test('venue code: every field is checked (types, lengths, ranges, enums, dates)'
   bad({ delay: 2.5 }, 'payday not whole');
   bad({ delay: '5' }, 'payday as text');
   bad({ jobs: [] }, 'no jobs');
-  bad({ jobs: Array.from({ length: 9 }, () => ({ k: 'bartender', rate: 100, unit: 'hr' })) }, 'too many jobs');
+  bad(
+    { jobs: Array.from({ length: 9 }, () => ({ k: 'bartender', rate: 100, unit: 'hr' })) },
+    'too many jobs',
+  );
   bad({ jobs: [{ k: 'nope', rate: 100, unit: 'hr' }] }, 'job kind');
   bad({ jobs: [{ k: 'ot', rate: 100, unit: 'hr' }] }, 'overtime is not a job');
   bad({ jobs: [{ k: 'bartender', rate: 0, unit: 'hr' }] }, 'rate 0');
@@ -221,7 +226,11 @@ test('venue ref and team data are cleaned', () => {
     name: 'Bar',
     staff: [{ name: 'Sam', role: 'Bar', points: 150 }],
   });
-  assert.deepEqual(cleanTeam({ venueId: ID, venue: { id: ID } }), { venueId: ID }, 'a bad venue is dropped, the id stays');
+  assert.deepEqual(
+    cleanTeam({ venueId: ID, venue: { id: ID } }),
+    { venueId: ID },
+    'a bad venue is dropped, the id stays',
+  );
   assert.equal(cleanTeam({ venueId: 'bad id' }), null);
   assert.equal(cleanStaff(Array.from({ length: 80 }, (_, i) => ({ name: 'P' + i }))).length, 60);
   assert.equal(cleanStaff([{ name: 'x'.repeat(25) }]).length, 0, 'a name over 24 characters');
@@ -253,7 +262,9 @@ test('a venue as a pay setup: jobs and tip-outs, ids kept on update, other pay s
     ],
     'the matching job keeps its id, the new one gets a free id, the bonus stays, the old Training job is dropped',
   );
-  const to = venueTipouts(v, [{ id: 't9', k: 'barback', who: 'barback', mode: 'flat', value: 5, from: 'cash' }]);
+  const to = venueTipouts(v, [
+    { id: 't9', k: 'barback', who: 'barback', mode: 'flat', value: 5, from: 'cash' },
+  ]);
   assert.equal(to.on, true);
   assert.deepEqual(
     to.list.map((r) => [r.id, r.k, r.mode, r.value, r.from]),
