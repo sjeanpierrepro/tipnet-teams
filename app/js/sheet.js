@@ -33,7 +33,12 @@ export function checkSheet(raw) {
   if (!isObj(raw)) return null;
   const venue = cleanVenueRef(raw.venue);
   const date = dateIn(raw.date, parseISO);
-  if (!venue || !date || typeof raw.method !== 'string' || !Object.hasOwn(METHOD_CODES, raw.method))
+  if (
+    !venue ||
+    !date ||
+    typeof raw.method !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(METHOD_CODES, raw.method)
+  )
     return null;
   if (!Array.isArray(raw.rows) || raw.rows.length < 1 || raw.rows.length > MAX_SHEET_ROWS) return null;
   const rows = [];
@@ -77,7 +82,10 @@ export function decodeSheet(data) {
   return checkSheet({
     venue: { id: w.i, name: w.n },
     date: w.d,
-    method: typeof w.m === 'string' && Object.hasOwn(METHOD_NAMES, w.m) ? METHOD_NAMES[w.m] : null,
+    method:
+      typeof w.m === 'string' && Object.prototype.hasOwnProperty.call(METHOD_NAMES, w.m)
+        ? METHOD_NAMES[w.m]
+        : null,
     rows,
   });
 }

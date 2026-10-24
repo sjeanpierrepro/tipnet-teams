@@ -33,13 +33,23 @@ export function reset() {
 /** A link was opened: kind 'join' or 'sheet', data the code after the "=". Anything that does not read says so and changes nothing. */
 export function openFragment({ kind, data }) {
   sel = { row: null, wp: null };
-  if (kind === 'join') {
-    const venue = decodeVenue(data);
-    pending = venue ? { kind: 'join', venue } : { kind: 'bad', message: BAD_LINK_MSG };
-  } else {
-    const sheet = decodeSheet(data);
-    pending = sheet ? { kind: 'sheet', sheet } : { kind: 'bad', message: BAD_SHEET_MSG };
+  const bad = { kind: 'bad', message: kind === 'join' ? BAD_LINK_MSG : BAD_SHEET_MSG };
+  try {
+    if (kind === 'join') {
+      const venue = decodeVenue(data);
+      pending = venue ? { kind: 'join', venue } : bad;
+    } else {
+      const sheet = decodeSheet(data);
+      pending = sheet ? { kind: 'sheet', sheet } : bad;
+    }
+  } catch (e) {
+    pending = bad; // anything that fails to read is a bad link, never a blank or broken screen
   }
+}
+/** Shown when a link cannot be read or shown at all (kind decides which plain message). */
+export function openBad(kind) {
+  sel = { row: null, wp: null };
+  pending = { kind: 'bad', message: kind === 'sheet' ? BAD_SHEET_MSG : BAD_LINK_MSG };
 }
 /** Something pasted in Setup that already read as a venue (see setup.js joinCard). */
 export function openParsed(p) {
@@ -451,8 +461,16 @@ function sheetScreen(root, sheet) {
 export function render(root) {
   const p = pending;
   clear(root);
-  if (p.kind === 'join') return joinScreen(root, p.venue);
-  if (p.kind === 'sheet') return sheetScreen(root, p.sheet);
+  if (p.kind === 'join' || p.kind === 'sheet') {
+    try {
+      return p.kind === 'join' ? joinScreen(root, p.venue) : sheetScreen(root, p.sheet);
+    } catch (e) {
+      // a link that read but cannot be shown: the plain bad-link screen, nothing changed
+      clear(root);
+      openBad(p.kind);
+      return render(root);
+    }
+  }
   const ok = el('button', { type: 'button', class: 'btn', id: 'link-bad-ok' }, 'OK');
   ok.addEventListener('click', close);
   root.append(

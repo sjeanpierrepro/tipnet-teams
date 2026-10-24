@@ -126,3 +126,23 @@ test('Setup > Join your venue takes a tip sheet link or a bare sheet code too', 
     await page.close();
   }
 });
+
+test('a link that reads but cannot be shown gives the plain bad-link screen, never a blank or error screen', async () => {
+  const { bus } = await import('../../app/js/ui/common.js');
+  const { BAD_LINK_MSG } = await import('../../app/js/venue.js');
+  const { BAD_SHEET_MSG } = await import('../../app/js/sheet.js');
+  const page = await boot({ seed: setUp() });
+  try {
+    bus.openLink({ kind: 'join', venue: { id: VID } }); // no name, no jobs: drawing it throws
+    assert.ok(page.$('#link-bad'), 'the bad-link screen');
+    assert.equal(page.text(page.$('#link-bad [role="alert"]')), BAD_LINK_MSG);
+    page.click(page.$('#link-bad-ok'));
+    bus.openLink({ kind: 'sheet', sheet: { venue: { id: VID }, rows: null } });
+    assert.equal(page.text(page.$('#link-bad [role="alert"]')), BAD_SHEET_MSG);
+    page.click(page.$('#link-bad-ok'));
+    assert.equal(page.$('#link-bad'), null);
+    assert.equal(page.state().nights.length, 0);
+  } finally {
+    await page.close();
+  }
+});

@@ -365,8 +365,13 @@ function setupServiceWorker() {
 
 /** A venue link or tip sheet link in the address: read it and take it out of the address at once, before anything loads. */
 function readLink() {
-  const frag = takeFragment(window);
-  if (frag) join.openFragment(frag);
+  let frag = null;
+  try {
+    frag = takeFragment(window);
+    if (frag) join.openFragment(frag);
+  } catch (e) {
+    if (frag) join.openBad(frag.kind); // never a blank screen: the plain bad-link message
+  }
   return !!frag;
 }
 
