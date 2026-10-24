@@ -266,7 +266,9 @@ function wireTabs() {
   nav.setAttribute('role', 'tablist');
   nav.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tab]');
-    if (b) go(b.dataset.tab);
+    if (!b) return;
+    join.reset(); // a venue link or tip sheet waiting for an answer is put aside by picking a tab (nothing was changed)
+    go(b.dataset.tab);
   });
   nav.addEventListener('keydown', (e) => {
     // arrow keys move between tabs

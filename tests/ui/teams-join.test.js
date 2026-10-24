@@ -428,3 +428,17 @@ test('a change typed in Setup and not saved is never lost to a join: it asks fir
     await page.close();
   }
 });
+
+test('picking a tab puts a waiting link aside; nothing was changed', async () => {
+  const page = await boot({ seed: setUpState(), url: joinUrl() });
+  try {
+    assert.ok(page.$('#join-screen'));
+    page.tab('periods');
+    assert.equal(page.$('#join-screen'), null);
+    assert.equal(tabNow(page), 'periods');
+    assert.equal(page.state().workplaces.length, 1);
+    assert.equal(page.state().workplaces[0].venue, undefined);
+  } finally {
+    await page.close();
+  }
+});

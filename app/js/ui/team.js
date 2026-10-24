@@ -846,6 +846,10 @@ function poolSection(S) {
       );
       return;
     }
+    if (t.name !== venueName()) {
+      team().name = venueName(); // remembered for the next sheet
+      save();
+    }
     const block = shareBlock({
       url,
       title: venueName() + ' tip sheet, ' + fmtDate(P.date),

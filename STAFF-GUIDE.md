@@ -104,3 +104,17 @@ At the bottom of **Pay periods**, **So far this pay period** adds up the nights 
 The Budget tab shows how much you can spend before your next payday, after bills and savings. With two establishments it counts both paychecks and shows whose check comes next; each goal asks **Save from which paycheck?** Add your bills (name, amount, day of the month), spending categories (like groceries) and goals. A new bill counts from the day you add it; if its due day already passed this month, TipNet asks **Already paid this month?** (ticked unless you untick it). Tick "Paid" when a bill is paid, and use "Log spending" when you buy something. Budget never guesses ahead: your next check is worked out only from the nights you have logged for its pay period (with none logged it shows $0), and everything else comes from the numbers you type. The check and the taxes in it are estimates. Budget is not part of the free app.
 
 **Where to find it:** at the very bottom of **Tonight**, **Pay periods** and **Setup** there is a **TipNet Budget** card ($1.99 a month or $20 a year). Tap **See what's inside** for a preview, or **Upgrade** to go straight to the plans (there's an **Upgrade** button in the preview too). Already have a key? Paste it on the same screen, under **I have a license key**. Until payments are switched on, the card says **Coming soon**. Once Budget is unlocked on your phone, the card goes away.
+
+## TipNet Teams: joining your venue and your tip sheet
+
+**Join your venue.** If your manager gave you a TipNet Teams link or QR code, open it (or, in **Setup**, tap **Join your venue** and paste it). TipNet shows **Join (your venue)** first, with the pay schedule, payday, jobs and tip-outs your manager shared. Nothing is changed until you tap a button, and the link has no pay or personal information in it.
+
+- **First time in TipNet:** tap **Set up with these**. The guided setup starts with the schedule, jobs and tip-outs filled in. You still add your own gross pay, deductions and shifts from your paystub, and you can change anything.
+- **Already set up:** tap **Add as a new establishment** (you can have 3 in the free app, 5 with Budget). If you already joined this venue, you'll see **Update jobs and tip-outs from (your venue)** instead. Tap it twice to confirm. Your own paystub numbers stay, and pay periods that have already ended keep the pay they were saved with.
+- **Not now** closes it and changes nothing.
+
+If a link doesn't work, TipNet says: "This link isn't a TipNet Teams venue code (or it's from a newer version). Nothing was changed."
+
+**Your tip sheet.** After a shift your manager may share a tip sheet link or QR code. Open it, tap your name, then **Open Tonight with my numbers**. Tonight opens for that date with your credit card tips, cash tips and hours filled in, and tip-outs unticked (the pool was already split). A note says which venue's tip sheet it came from. Look it over and tap **Save night**: nothing is saved until you do. If you already saved a night for that date, TipNet asks whether to add to it, replace it, or save it as a separate night, like always.
+
+Anyone with the sheet link sees everyone's share, so only open it from your manager.

@@ -117,3 +117,14 @@ The Budget tab helps plan money between paychecks: "safe to spend until payday",
 A calm **TipNet Budget** card at the bottom of Tonight, Pay periods and Setup shows the price and opens a preview of Budget ("Coming soon" while payments are off); it disappears once Budget is unlocked on that device. The Budget tab itself is hidden until you switch on payments (in `app/js/billing-config.js`; click-by-click steps are in `PAYMENTS.md`). Once payments are on, customers can buy a license key and paste it into the Budget tab to unlock the feature.
 
 To try it locally, open the app on localhost with `?unlock=dev` on the end of the address.
+
+## TipNet Teams (manager tools)
+
+TipNet Teams is the business edition. A manager gets a **Team** tab (`app/js/ui/team.js`, shown only when `teamsUnlocked()` from `app/js/entitlements.js` is true; on localhost, `?unlock=dev` turns it on) with two tools. See `MANAGER-GUIDE.md` for how to use them.
+
+- **Venue setup code.** The manager fills in the venue name, pay schedule, the current pay period and payday, jobs with rates and tip-outs. TipNet makes a link (`#join=...`), a QR code and a printable poster. Staff open the link or paste the code in Setup under **Join your venue**, see a preview, and set up (or add an establishment, or update the jobs and tip-outs of one with the same venue id). The code has no personal pay data. The venue is stored on the establishment as `workplace.venue = {id, name}`.
+- **Tip pool and tip sheets.** Four split methods (by hours, points x hours, equal, role %), worked out in whole cents by the largest-remainder method (`app/js/pool.js`) so each column adds up to the pool exactly. A sheet can be printed or shared as a link or QR (`#sheet=...`); a worker opens it, picks their name and logs their share on Tonight, with nothing saved until they tap Save night.
+
+How the codes work: compact JSON with short keys and a version field, as UTF-8 then base64url, in the URL fragment (`app/js/codec.js`, `venue.js`, `sheet.js`). The fragment never reaches a server and the app works offline. The app reads the fragment, removes it at once with `history.replaceState`, and validates it strictly (version, types, lengths, ranges, enums, real dates, no `__proto__`, `constructor` or `prototype` keys, capped sizes: 1,500 bytes for a venue code, 2,500 for a tip sheet). The QR code is an SVG built with `createElementNS` from the vendored qrcode-generator 1.4.4 (MIT) in `app/js/vendor/qrcode.js`, which is left out of lint and format checks.
+
+The manager's venue id, the last venue code made and the staff list (names, roles, points) are kept in `settings.team` on the manager's device and are included in backups.
