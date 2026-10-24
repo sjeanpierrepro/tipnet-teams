@@ -236,7 +236,7 @@ test('another window saved: the screen shows its data; unsaved changes here are 
     assert.equal(page.doc.documentElement.getAttribute('data-theme'), 'dark');
     assert.match(
       page.doc.getElementById('toast').textContent,
-      /TipNet was updated in another window\. Showing the latest\./,
+      /TipNet Teams was updated in another window\. Showing the latest\./,
     );
     const S = JSON.parse(page.win.localStorage.getItem('tipnet.v2'));
     assert.equal(S.nights.length, 3, 'the merged data is saved');

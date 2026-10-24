@@ -95,7 +95,7 @@ function errorScreen(root) {
     armedLabel: 'Tap again to erase all nights and settings',
     onConfirm: () => {
       eraseEverything();
-      toast('Erased. TipNet starts fresh.');
+      toast('Erased. TipNet Teams starts fresh.');
       afterFix();
     },
   });
@@ -107,7 +107,11 @@ function errorScreen(root) {
       el(
         'section',
         { class: 'card stack' },
-        el('h2', { tabindex: '-1' }, 'This data was saved by a newer version of TipNet. Reload to update.'),
+        el(
+          'h2',
+          { tabindex: '-1' },
+          'This data was saved by a newer version of TipNet Teams. Reload to update.',
+        ),
         el(
           'p',
           { class: 'note' },
@@ -132,7 +136,7 @@ function errorScreen(root) {
       el(
         'p',
         { class: 'note' },
-        'TipNet could not show this screen. That usually means some saved data is damaged. Nothing was sent anywhere. You can reload, try another tab, restore a backup code, or erase everything and start fresh.',
+        'TipNet Teams could not show this screen. That usually means some saved data is damaged. Nothing was sent anywhere. You can reload, try another tab, restore a backup code, or erase everything and start fresh.',
       ),
       el('div', { class: 'field' }, el('label', { for: 'err-code' }, 'Backup code'), box),
       msg,
@@ -391,12 +395,12 @@ async function boot() {
     const typed = captureTyped(root);
     render();
     restoreTyped(root, typed);
-    if (conflict) toast('TipNet was updated in another window. Showing the latest.');
+    if (conflict) toast('TipNet Teams was updated in another window. Showing the latest.');
   });
   window.addEventListener('storage', (e) => {
     if (e.key === null || e.key === 'tipnet.v2') storage.syncFromStorage();
   });
-  // A failed save (storage full or blocked) says so; the data stays in memory while TipNet is open.
+  // A failed save (storage full or blocked) says so; the data stays in memory while TipNet Teams is open.
   const saveError = document.getElementById('save-error');
   storage.setSaveHandler((ok) => {
     if (saveError) saveError.hidden = ok;

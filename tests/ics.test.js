@@ -70,7 +70,7 @@ test('the event: floating DTSTART (no Z), UTC DTSTAMP, 5 minutes, alarm at start
     'UID:' + UID,
     'SEQUENCE:3',
     'DURATION:PT5M',
-    'SUMMARY:Log tonight in TipNet',
+    'SUMMARY:Log tonight in TipNet Teams',
     'URL:https://x.test/tipnet/',
     'BEGIN:VALARM',
     'ACTION:DISPLAY',

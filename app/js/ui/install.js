@@ -1,4 +1,4 @@
-// "Put TipNet on your home screen": what this device can do, and the pieces the Setup step and Setup > Backup share.
+// "Put TipNet Teams on your home screen": what this device can do, and the pieces the Setup step and Setup > Backup share.
 import { el, install } from './common.js';
 
 /** Running as the installed app (home-screen icon), not in a browser tab. */
@@ -57,13 +57,13 @@ export function installHowTo(kind) {
         { class: 'stack-sm', id: 'install-howto' },
         el('li', null, 'Tap the Share button in Safari (the square with an arrow).'),
         el('li', null, 'Tap Add to Home Screen, then tap Add.'),
-        el('li', null, 'Open TipNet from the new icon on your Home Screen and set up there.'),
+        el('li', null, 'Open TipNet Teams from the new icon on your Home Screen and set up there.'),
       )
     : el(
         'ol',
         { class: 'stack-sm', id: 'install-howto' },
         el('li', null, 'Tap the Chrome menu (⋮) at the top right.'),
         el('li', null, 'Tap Install app, or Add to Home screen.'),
-        el('li', null, 'Open TipNet from the new icon on your Home screen.'),
+        el('li', null, 'Open TipNet Teams from the new icon on your Home screen.'),
       );
 }

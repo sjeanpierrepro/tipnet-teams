@@ -197,7 +197,7 @@ test('sw: install precaches the whole shell with cache: reload into the versione
   await sw.lifecycle('install');
   const shell = sw.get('SHELL'),
     version = sw.get('VERSION');
-  assert.match(version, /^tipnet-/);
+  assert.match(version, /^tipnetteams-v\d+$/);
   assert.equal(sw.calls.added.length, shell.length);
   assert.ok(sw.calls.added.every((a) => a.cache === 'reload' && a.into === version));
   assert.deepEqual(

@@ -409,7 +409,7 @@ function upgradeCard() {
           { class: 'hint' },
           'Opens the payment page in a new tab. Payments are handled by ' +
             providerInfo(BILLING).name +
-            ', not by TipNet.',
+            ', not by TipNet Teams.',
         )
       : el('p', { class: 'hint' }, 'Payments aren’t switched on yet.'),
     form,
@@ -447,7 +447,7 @@ function lockedView(S) {
             'Your subscription is not active on this device' +
               (isOnline()
                 ? '.'
-                : ', or it could not be checked while offline. Connect to the internet and open TipNet again.'),
+                : ', or it could not be checked while offline. Connect to the internet and open TipNet Teams again.'),
           ),
         )
       : null,

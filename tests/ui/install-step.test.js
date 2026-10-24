@@ -1,4 +1,4 @@
-// The "Put TipNet on your home screen" step of the first guided setup: where it sits on each kind of device.
+// The "Put TipNet Teams on your home screen" step of the first guided setup: where it sits on each kind of device.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, realState } from './harness.js';
@@ -69,7 +69,7 @@ test('iPhone Safari: the step comes first; "Set up here in Safari instead" conti
     const t = page.text();
     assert.match(t, /Share/);
     assert.match(t, /Add to Home Screen/);
-    assert.match(t, /open TipNet from the new icon/i);
+    assert.match(t, /open TipNet Teams from the new icon/i);
     assert.equal(page.byText('button', 'Next'), null, 'the how-to has no Next');
     assert.equal(page.$$('h1', page.app).length, 1);
     page.click(page.button('Set up here in Safari instead'));
@@ -100,7 +100,7 @@ test('iPhone Safari: the step comes first; "Set up here in Safari instead" conti
   }
 });
 
-test('install prompt available on a computer: the step comes after step 3 is saved; Install TipNet calls prompt()', async () => {
+test('install prompt available on a computer: the step comes after step 3 is saved; Install TipNet Teams calls prompt()', async () => {
   const page = await boot();
   try {
     let prompted = 0;
@@ -126,11 +126,14 @@ test('install prompt available on a computer: the step comes after step 3 is sav
     assert.match(current(page), /^4\. Install app/);
     assert.match(page.text(), /Your setup is saved/);
     assert.equal(document.activeElement.tagName, 'H1');
-    page.click(page.button('Install TipNet'));
+    page.click(page.button('Install TipNet Teams'));
     await page.settle();
     assert.equal(prompted, 1);
-    assert.match(page.text(), /Installed\. From now on, open TipNet from its own icon on this computer\./);
-    assert.equal(page.byText('button', 'Install TipNet'), null);
+    assert.match(
+      page.text(),
+      /Installed\. From now on, open TipNet Teams from its own icon on this computer\./,
+    );
+    assert.equal(page.byText('button', 'Install TipNet Teams'), null);
     page.click(page.button('Done'));
     await page.settle();
     assert.equal(page.state().settings.installStepSeen, true);
@@ -155,10 +158,10 @@ test('install prompt available on an Android phone: the last step says "Home scr
     ]);
     await finishSetup(page);
     assert.match(current(page), /^4\. Home screen/);
-    assert.match(page.text(), /Put TipNet on your home screen/);
-    page.click(page.button('Install TipNet'));
+    assert.match(page.text(), /Put TipNet Teams on your home screen/);
+    page.click(page.button('Install TipNet Teams'));
     await page.settle();
-    assert.match(page.text(), /Installed\. From now on, open TipNet from your home screen\./);
+    assert.match(page.text(), /Installed\. From now on, open TipNet Teams from your home screen\./);
   } finally {
     await page.close();
   }
@@ -177,13 +180,13 @@ test('install prompt available: "Not now" finishes; a dismissed prompt changes n
     await openSetup(page);
     await finishSetup(page);
     const before = JSON.stringify(page.state().workplaces);
-    page.click(page.button('Install TipNet'));
+    page.click(page.button('Install TipNet Teams'));
     await page.settle();
     assert.equal(prompted, 1);
     assert.doesNotMatch(page.text(), /Installed\./);
     assert.equal(JSON.stringify(page.state().workplaces), before);
     // the prompt is used up: only Done is left
-    assert.equal(page.byText('button', 'Install TipNet'), null);
+    assert.equal(page.byText('button', 'Install TipNet Teams'), null);
     page.click(page.button('Done'));
     await page.settle();
     assert.equal(page.$('#install-now'), null);
@@ -223,7 +226,7 @@ test('Android without a prompt: the menu steps come last, with Done', async () =
     assert.match(t, /Chrome menu/);
     assert.match(t, /Install app/);
     assert.match(t, /Add to Home screen/);
-    assert.equal(page.byText('button', 'Install TipNet'), null);
+    assert.equal(page.byText('button', 'Install TipNet Teams'), null);
     page.click(page.button('Done'));
     await page.settle();
     assert.equal(page.byText('button', 'Done'), null);
@@ -329,7 +332,7 @@ test('iPhone Safari: while the home-screen step shows, no restore is offered; it
     assert.equal(page.byText('button', 'Moving from another phone? Restore a backup code'), null);
     assert.match(
       page.$('#restore-later').textContent,
-      /^Moving from another phone\? Add TipNet to your home screen first, then restore your backup there\.$/,
+      /^Moving from another phone\? Add TipNet Teams to your home screen first, then restore your backup there\.$/,
     );
     // a restore asked for elsewhere (the example banner on Tonight) still lands on the step, not on a restore box
     restoreRequest.open = true;

@@ -2,7 +2,7 @@
    It does NOT skipWaiting on its own: the page shows "Update available: Refresh" and
    posts {type:'SKIP_WAITING'} (or the string 'SKIP_WAITING') when the user agrees. Only when it takes over from a
    version before v38 does it reload the open windows itself (see activate). */
-const VERSION = 'tipnet-v44';
+const VERSION = 'tipnetteams-v1';
 
 const SHELL = [
   './',
@@ -39,6 +39,7 @@ const SHELL = [
   'js/ui/install.js',
   'js/ui/common.js',
   'js/ui/budget.js',
+  'js/vendor/qrcode.js',
 ];
 
 self.addEventListener('install', (event) => {
@@ -88,7 +89,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       const fromOld = keys.some(beforeV38); // looked at before the old caches go
       return Promise.all(
-        keys.filter((k) => k.startsWith('tipnet-') && k !== VERSION).map((k) => caches.delete(k)),
+        keys.filter((k) => k.startsWith('tipnet') && k !== VERSION).map((k) => caches.delete(k)),
       )
         .then(() => self.clients.claim())
         .then(() => {

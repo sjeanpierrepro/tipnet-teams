@@ -19,7 +19,7 @@ const DAY = 24 * 3600 * 1000;
 export const iosNote = { shown: false };
 
 export function renderInstall(host) {
-  const native = el('button', { type: 'button', class: 'btn', hidden: true }, 'Install TipNet');
+  const native = el('button', { type: 'button', class: 'btn', hidden: true }, 'Install TipNet Teams');
   native.addEventListener('click', async () => {
     await promptInstall();
     sync();
@@ -38,10 +38,14 @@ export function renderInstall(host) {
     evictNote = el(
       'p',
       { class: 'note', id: 'ios-evict-note' },
-      'On iPhone, Safari may clear a website’s data if you don’t open it for about a week. Add TipNet to your Home Screen and keep a backup.',
+      'On iPhone, Safari may clear a website’s data if you don’t open it for about a week. Add TipNet Teams to your Home Screen and keep a backup.',
     );
   }
-  const status = el('p', { class: 'hint', hidden: !standalone }, 'You are using TipNet as an installed app.');
+  const status = el(
+    'p',
+    { class: 'hint', hidden: !standalone },
+    'You are using TipNet Teams as an installed app.',
+  );
   const row = (a, b) =>
     el(
       'div',
@@ -60,8 +64,8 @@ export function renderInstall(host) {
     el(
       'section',
       { class: 'card stack' },
-      el('h2', null, 'Put TipNet on your home screen'),
-      el('p', { class: 'note' }, 'TipNet runs in any browser. Add it once so it opens like an app.'),
+      el('h2', null, 'Put TipNet Teams on your home screen'),
+      el('p', { class: 'note' }, 'TipNet Teams runs in any browser. Add it once so it opens like an app.'),
       evictNote,
       status,
       native,
@@ -83,7 +87,7 @@ export function renderInstall(host) {
       el(
         'p',
         { class: 'note' },
-        el('strong', null, 'Always open TipNet the same way. '),
+        el('strong', null, 'Always open TipNet Teams the same way. '),
         'Your phone can keep the home-screen version and the browser version as two separate copies with different nights saved. If you switch, move your data with a backup code below.',
       ),
     ),
@@ -117,9 +121,9 @@ export function worthKeeping(S) {
 
 /** Restore refused a backup made by a newer TipNet (Error('newer-backup')): what to do instead. */
 export const NEWER_BACKUP_MSG =
-  'This backup was made by a newer version of TipNet. Nothing was changed. Reload TipNet to get the update, then restore it again.';
+  'This backup was made by a newer version of TipNet Teams. Nothing was changed. Reload TipNet Teams to get the update, then restore it again.';
 /** Restore refused a code or file that reads but isn't TipNet data (Error('not-tipnet')). */
-export const NOT_TIPNET_MSG = 'This isn’t a TipNet backup. Nothing was changed.';
+export const NOT_TIPNET_MSG = 'This isn’t a TipNet Teams backup. Nothing was changed.';
 /** What was here before the last restore, while its Undo is offered (memory only, never saved). */
 let beforeRestore = null;
 /** Put back what was here before the last restore. Returns false when there is nothing to put back. */
@@ -251,7 +255,7 @@ export function shareBackupButton(id, { done, failed }) {
     const at = Date.now();
     let p;
     try {
-      p = Promise.resolve(navigator.share({ files: [backupShareFile(at)], title: 'TipNet backup' }));
+      p = Promise.resolve(navigator.share({ files: [backupShareFile(at)], title: 'TipNet Teams backup' }));
     } catch (e) {
       p = Promise.reject(e);
     }
@@ -552,7 +556,7 @@ export function renderBackup(host, { restoreOnly = false } = {}) {
     armedLabel: 'Tap again to erase all nights and settings',
     onConfirm: () => {
       eraseEverything();
-      toast('Erased. TipNet starts fresh: set it up with your paystub.');
+      toast('Erased. TipNet Teams starts fresh: set it up with your paystub.');
       bus.stateReplaced();
     },
   });
@@ -567,7 +571,7 @@ export function renderBackup(host, { restoreOnly = false } = {}) {
         el(
           'p',
           { class: 'note' },
-          'On your old phone, open TipNet, go to Setup, and tap Copy backup code. Paste that code here. Or, if you saved a backup file, tap Restore from a file.',
+          'On your old phone, open TipNet Teams, go to Setup, and tap Copy backup code. Paste that code here. Or, if you saved a backup file, tap Restore from a file.',
         ),
         el('div', { class: 'field' }, el('label', { for: 'bk-code' }, 'Backup code'), box),
         el('div', { class: 'cluster' }, restore, openFile),

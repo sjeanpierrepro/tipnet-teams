@@ -1,6 +1,6 @@
 {
-  "name": "TipNet",
-  "short_name": "TipNet",
+  "name": "TipNet Teams",
+  "short_name": "TipNet Teams",
   "description": "Estimate your take-home tips after tax, one night at a time.",
   "start_url": "./index.html",
   "scope": "./",

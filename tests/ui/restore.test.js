@@ -184,14 +184,14 @@ test('restore: a code from a newer TipNet is refused with a plain message, and n
     // refused on the FIRST tap (the before check of arm): no "Tap again to replace what is here" for a code that cannot restore
     const btn = page.button('Restore from code');
     page.click(btn);
-    assert.match(page.text(), /This backup was made by a newer version of TipNet\./);
+    assert.match(page.text(), /This backup was made by a newer version of TipNet Teams\./);
     assert.equal(btn.textContent, 'Restore from code', 'not armed');
     assert.equal(btn.hasAttribute('data-armed'), false);
     assert.equal(JSON.stringify(page.state()), before);
     // a code that isn't TipNet data, and one that can't be read: the same, each with its own message
     page.type(page.$('#bk-code'), toCode({ workplaces: [], nights: [] }));
     page.click(btn);
-    assert.match(page.text(), /This isn’t a TipNet backup\. Nothing was changed\./);
+    assert.match(page.text(), /This isn’t a TipNet Teams backup\. Nothing was changed\./);
     assert.equal(btn.textContent, 'Restore from code');
     page.type(page.$('#bk-code'), 'abc');
     page.click(btn);
@@ -224,7 +224,11 @@ test('restore: a code or file that is not TipNet data is refused with a plain me
       );
       page.click(btn);
       if (/Tap again/.test(btn.textContent)) page.click(btn);
-      assert.match(page.text(), /This isn’t a TipNet backup\. Nothing was changed\./, JSON.stringify(d));
+      assert.match(
+        page.text(),
+        /This isn’t a TipNet Teams backup\. Nothing was changed\./,
+        JSON.stringify(d),
+      );
       assert.equal(JSON.stringify(page.state()), before);
       // the same as a file
       const input = page.must(page.$('#bk-file'), 'file input');
@@ -235,7 +239,7 @@ test('restore: a code or file that is not TipNet data is refused with a plain me
       });
       input.dispatchEvent(new page.win.Event('change'));
       await page.settle();
-      assert.match(page.text(), /This isn’t a TipNet backup\. Nothing was changed\./);
+      assert.match(page.text(), /This isn’t a TipNet Teams backup\. Nothing was changed\./);
       assert.equal(JSON.stringify(page.state()), before);
     }
   } finally {

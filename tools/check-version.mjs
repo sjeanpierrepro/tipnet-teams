@@ -45,7 +45,7 @@ if (bumped) {
 }
 console.error(
   'check-version: files under app/ changed but VERSION in app/sw.js did not.\n' +
-    "Add 1 to the number in the line  const VERSION = 'tipnet-vNN';  so installed apps fetch the update.\n" +
+    "Add 1 to the number in the line  const VERSION = 'tipnetteams-vNN';  so installed apps fetch the update.\n" +
     'Changed: ' +
     changed.join(', '),
 );

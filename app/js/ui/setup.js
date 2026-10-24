@@ -84,7 +84,7 @@ import { buildIcs, makeUid, timeLabel, nightsLabel, isMorning, DAY_NAMES } from 
 import { redateDraft, dropDraft } from './tonight.js';
 
 let guidedStep = 0;
-// The "Put TipNet on your home screen" step AFTER a finished first setup (null = not showing): {kind: 'prompt'|'android',
+// The "Put TipNet Teams on your home screen" step AFTER a finished first setup (null = not showing): {kind: 'prompt'|'android',
 // accepted, doneToasts}. Setup is already saved when it shows; it only ever ends the flow (memory only, never saved).
 let afterSetup = null;
 let guidedRecheck = false; // Next / Finish sent the person back to a step with a value missing (guidedGap): mark it
@@ -396,7 +396,7 @@ function makeCtx(w, blank = false, guidedNow = blank, draft = null) {
           if (n === saveSeq)
             saved.textContent = ok
               ? 'All changes saved on this device.'
-              : 'Couldn’t save on this device. Your changes are kept while TipNet is open.';
+              : 'Couldn’t save on this device. Your changes are kept while TipNet Teams is open.';
         });
         return;
       }
@@ -420,7 +420,7 @@ function makeCtx(w, blank = false, guidedNow = blank, draft = null) {
         if (n === saveSeq)
           saved.textContent = ok
             ? 'All changes saved on this device.'
-            : 'Couldn’t save on this device. Your changes are kept while TipNet is open.';
+            : 'Couldn’t save on this device. Your changes are kept while TipNet Teams is open.';
       });
       live.forEach((f) => f());
     },
@@ -1794,7 +1794,7 @@ function reminderCard(ctx) {
     el(
       'p',
       { class: 'hint' },
-      "Your phone's calendar will remind you at this time to log tonight in TipNet. To change it later, add a new one here and delete the old reminder in your calendar.",
+      "Your phone's calendar will remind you at this time to log tonight in TipNet Teams. To change it later, add a new one here and delete the old reminder in your calendar.",
     ),
   );
 }
@@ -2164,13 +2164,13 @@ function workplaceCard(ctx) {
   );
 }
 
-/* ============ "Put TipNet on your home screen" step of the first guided setup ============ */
+/* ============ "Put TipNet Teams on your home screen" step of the first guided setup ============ */
 /** iPhone/iPad Safari, before step 1: the home-screen app keeps its own data, so set up there. Nothing typed yet. */
 function iosFirstCard() {
   const card = el(
     'section',
     { class: 'card stack' },
-    el('h2', null, 'Put TipNet on your home screen first'),
+    el('h2', null, 'Put TipNet Teams on your home screen first'),
     el(
       'p',
       { class: 'note' },
@@ -2204,13 +2204,13 @@ function installWords(kind) {
   return kind === 'android' || isIos() || isAndroid()
     ? {
         tab: 'Home screen',
-        title: 'Put TipNet on your home screen',
-        installed: 'Installed. From now on, open TipNet from your home screen.',
+        title: 'Put TipNet Teams on your home screen',
+        installed: 'Installed. From now on, open TipNet Teams from your home screen.',
       }
     : {
         tab: 'Install app',
-        title: 'Open TipNet like an app',
-        installed: 'Installed. From now on, open TipNet from its own icon on this computer.',
+        title: 'Open TipNet Teams like an app',
+        installed: 'Installed. From now on, open TipNet Teams from its own icon on this computer.',
       };
 }
 
@@ -2246,7 +2246,7 @@ function afterSetupStep(root, S) {
             bus.rerender();
           },
         },
-        'Install TipNet',
+        'Install TipNet Teams',
       ),
       el('button', { type: 'button', class: 'btn btn-secondary', onclick: finish }, 'Not now'),
     );
@@ -2255,7 +2255,7 @@ function afterSetupStep(root, S) {
     el(
       'div',
       { class: 'stack' },
-      el('h1', { tabindex: '-1' }, 'Set up TipNet'),
+      el('h1', { tabindex: '-1' }, 'Set up TipNet Teams'),
       el('p', { class: 'note' }, 'Your setup is saved.'),
       explain(el('p', { class: 'hint' }, 'Four short steps. You can change any of it later.')),
       el(
@@ -2464,7 +2464,7 @@ function guided(root, ctx) {
       el(
         'div',
         { class: 'stack' },
-        el('h1', null, 'Set up TipNet'),
+        el('h1', null, 'Set up TipNet Teams'),
         host,
         el(
           'div',
@@ -2493,7 +2493,7 @@ function guided(root, ctx) {
     ? el(
         'p',
         { class: 'hint', id: 'restore-later' },
-        'Moving from another phone? Add TipNet to your home screen first, then restore your backup there.',
+        'Moving from another phone? Add TipNet Teams to your home screen first, then restore your backup there.',
       )
     : guidedStep === 0 && first && !many
       ? el(
@@ -2533,7 +2533,7 @@ function guided(root, ctx) {
       'div',
       { class: 'stack' },
       switcher,
-      el('h1', { tabindex: '-1' }, first && !many ? 'Set up TipNet' : 'Set up ' + w.name),
+      el('h1', { tabindex: '-1' }, first && !many ? 'Set up TipNet Teams' : 'Set up ' + w.name),
       explain(
         el(
           'p',
@@ -2814,7 +2814,7 @@ function saveOpen() {
     if (n !== saveSeq || lastSaved !== mine) return;
     mine.text = ok
       ? 'Saved.' + note
-      : 'Couldn’t save on this device. Your changes are kept while TipNet is open.';
+      : 'Couldn’t save on this device. Your changes are kept while TipNet Teams is open.';
     const line = document.getElementById('wp-saved-' + w.id);
     if (line) line.textContent = mine.text;
   });
@@ -3184,7 +3184,12 @@ function fullPage(root, S, active) {
         () => reminderText(getState().settings.reminder),
         inner(reminderCard(ctx)),
       ),
-      foldRow('install', 'Install TipNet', () => 'Open it like an app', inner(installHost.firstElementChild)),
+      foldRow(
+        'install',
+        'Install TipNet Teams',
+        () => 'Open it like an app',
+        inner(installHost.firstElementChild),
+      ),
       foldRow('backup', 'Backups', lastBackup, inner(backupHost.firstElementChild)),
       sub
         ? foldRow(
@@ -3198,7 +3203,7 @@ function fullPage(root, S, active) {
         el(
           'p',
           { class: 'note' },
-          'TipNet keeps your numbers in this browser only. ',
+          'TipNet Teams keeps your numbers in this browser only. ',
           el('a', { href: 'privacy.html' }, 'Privacy'),
           ' · ',
           el('a', { href: 'terms.html' }, 'Terms'),

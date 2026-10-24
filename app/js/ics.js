@@ -120,7 +120,7 @@ export function buildIcs({ time, days, uid, sequence = 0, now = new Date(), url 
   if (!start) throw new Error('Pick a time and at least one day.');
   const rrule =
     set.length === 7 ? 'FREQ=DAILY' : 'FREQ=WEEKLY;BYDAY=' + set.map((i) => DAY_CODES[i]).join(',');
-  const desc = 'Log tonight in TipNet' + (url ? ': ' + url : '');
+  const desc = 'Log tonight in TipNet Teams' + (url ? ': ' + url : '');
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -134,14 +134,14 @@ export function buildIcs({ time, days, uid, sequence = 0, now = new Date(), url 
     'DTSTART:' + floating(start),
     'DURATION:PT5M',
     'RRULE:' + rrule,
-    'SUMMARY:' + escapeText('Log tonight in TipNet'),
+    'SUMMARY:' + escapeText('Log tonight in TipNet Teams'),
     'DESCRIPTION:' + escapeText(desc),
   ];
   if (url) lines.push('URL:' + url);
   lines.push(
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
-    'DESCRIPTION:' + escapeText('Log tonight in TipNet'),
+    'DESCRIPTION:' + escapeText('Log tonight in TipNet Teams'),
     'TRIGGER:PT0M',
     'END:VALARM',
     'END:VEVENT',

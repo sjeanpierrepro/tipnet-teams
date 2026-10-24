@@ -124,7 +124,7 @@ test('share resolves: same bookkeeping as Save backup file; the file equals the 
     assert.equal(calls.length, 1, 'share() is called straight from the click');
     await page.settle();
     const [file] = calls[0].files;
-    assert.equal(calls[0].title, 'TipNet backup');
+    assert.equal(calls[0].title, 'TipNet Teams backup');
     assert.equal(file.name, 'tipnet-backup-' + todayISO() + '.txt');
     assert.equal(file.type, 'text/plain');
     const s = page.state().settings;
