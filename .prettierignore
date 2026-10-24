@@ -4,3 +4,4 @@ app/fonts
 app/icons
 *.md
 package-lock.json
+app/js/vendor
