@@ -51,7 +51,7 @@ A sheet holds up to 50 people. If you try to add more, TipNet says so: make a se
 
 ## The Staff Perks Credit
 
-When a staff member who joined your venue keeps a TipNet Budget subscription, your venue earns 25% of what they pay. Once a month we give it to you as a partial refund to your card on your most recent TipNet Teams payment, never more than that payment. We count at most 50 staff subscribers per venue, so the credit is always less than your bill. You see a count, never names. Budget is never required for the job and can never be taken out of wages or tips.
+When a staff member who joined your venue keeps a TipNet Budget subscription, your venue earns 25% of what they pay. Once a month we give it to you as a partial refund to your card on your most recent TipNet Teams payment; the refunds on one payment never add up to more than that payment. We count at most 50 staff subscribers per venue, so on a monthly plan it is always less than your bill. You see a count, never names. Budget is never required for the job and can never be taken out of wages or tips.
 
 ## Good to know
 

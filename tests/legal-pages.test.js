@@ -61,7 +61,8 @@ test('legal pages: business customers, staff, the Staff Perks Credit terms, no j
   for (const t of [terms, priv]) assert.match(t, /venue/i);
   assert.match(terms, /25%/);
   assert.match(terms, /partial refund on the venue's most recent TipNet Teams payment/);
-  assert.match(terms, /never more than that payment/);
+  assert.match(terms, /the refunds on any one payment never add up to more than that payment/);
+  assert.doesNotMatch(terms, /never be more than the venue's bill|never exceed the bill/);
   assert.match(terms, /at most 50 staff subscribers per venue/);
   assert.match(terms, /up to 50 staff per location/);
   assert.doesNotMatch(terms, /next TipNet Teams bill|never paid as cash/);
