@@ -232,9 +232,9 @@ test('wrong product vs mistyped key', () => {
 
 /* ---------- 6. config skew ---------- */
 test('billing config is read defensively', () => {
-  // getProvider/checkoutUrl with no argument use the shipped billing-config.js (Polar since tipnet-v43); readConfig
+  // getProvider/checkoutUrl with no argument use the shipped billing-config.js (Lemon Squeezy, both products); readConfig
   // with nothing to read stays off like any other bad input.
-  assert.equal(getProvider()?.id, 'polar');
+  assert.equal(getProvider()?.id, 'lemonsqueezy');
   assert.equal(readConfig(undefined).provider, null);
   for (const bad of [
     null,
@@ -252,8 +252,13 @@ test('billing config is read defensively', () => {
     assert.equal(checkoutUrl('monthly', bad), '');
   }
   assert.equal(
-    readConfig({ provider: 'lemonsqueezy', extra: 1, checkout: { monthly: 'https://x' } }).checkout.monthly,
-    'https://x',
+    readConfig({
+      provider: 'lemonsqueezy',
+      extra: 1,
+      productIds: [1],
+      checkout: { monthly: 'https://s.lemonsqueezy.com/checkout/buy/11111111-2222-3333-4444-555555555555' },
+    }).checkout.monthly,
+    'https://s.lemonsqueezy.com/checkout/buy/11111111-2222-3333-4444-555555555555',
   );
 });
 

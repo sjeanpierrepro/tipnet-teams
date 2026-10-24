@@ -78,13 +78,14 @@ test('Budget card: at the very bottom of Tonight and Setup; Coming soon while pa
   }
 });
 
+const M = 'https://shop.lemonsqueezy.com/checkout/buy/11111111-2222-3333-4444-555555555555?enabled=1';
+const Y = 'https://shop.lemonsqueezy.com/checkout/buy/66666666-7777-8888-9999-000000000000?enabled=2';
+
 test('Budget card: payments on, "Upgrade" goes straight to the plans and the key box', async () => {
   const page = await boot({ seed: setUp(), payments: true });
-  const ids = BILLING.productIds;
   try {
-    BILLING.checkout.monthly = 'https://example.test/m';
-    BILLING.checkout.yearly = 'https://example.test/y';
-    BILLING.productIds = [123]; // a live store has its product ids filled in
+    BILLING.checkout.monthly = M;
+    BILLING.checkout.yearly = Y;
     page.tab('tonight');
     const box = teaser(page);
     assert.ok(box && isLast(page));
@@ -96,11 +97,10 @@ test('Budget card: payments on, "Upgrade" goes straight to the plans and the key
     const links = page.$$('a', page.$('#budget-upgrade'));
     assert.deepEqual(
       links.map((a) => a.getAttribute('href')),
-      ['https://example.test/m', 'https://example.test/y'],
+      [M, Y],
     );
     assert.ok(page.$('#license-key'), 'the key box is right there');
   } finally {
-    BILLING.productIds = ids;
     BILLING.checkout.monthly = '';
     BILLING.checkout.yearly = '';
     await page.close();

@@ -8,6 +8,10 @@ import * as configModule from './billing-config.js';
 
 const WRONG_PRODUCT =
   'This key is real, but it is for a different product, not TipNet Teams or TipNet Budget.';
+// A Lemon Squeezy checkout link must be a /checkout/buy/<uuid> link (optionally with ?enabled=<variant id>). A ?cart= link
+// or anything else is dropped, so the buttons stay off rather than send a customer somewhere unexpected.
+const LS_BUY_LINK =
+  /^https:\/\/[a-z0-9-]+\.lemonsqueezy\.com\/checkout\/buy\/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}(\?enabled=\d+)?$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The two things on sale. budget: TipNet Budget for staff. teams: TipNet Teams for venues. */
@@ -39,11 +43,13 @@ export function readConfig(raw) {
     const flat = name === 'budget'; // the old flat fields belong to Budget
     const ids = flat ? legacyIds : [];
     const productId = idOk(p.productId) ? String(p.productId).trim() : ids.length ? String(ids[0]) : '';
+    // Lemon Squeezy links are checked (see LS_BUY_LINK); other providers' links are taken as typed.
+    const link = (v) => (c.provider === 'lemonsqueezy' ? (LS_BUY_LINK.test(str(v)) ? str(v) : '') : str(v));
     const links = obj(p.checkout || (flat ? c.checkout : null));
     const out = {
       productId,
       prices: { ...base, ...obj(p.prices || (flat ? c.prices : null)) },
-      checkout: { monthly: str(links.monthly), yearly: str(links.yearly) },
+      checkout: { monthly: link(links.monthly), yearly: link(links.yearly) },
     };
     // A scheduled price change: from `at` on, the screens show these prices (and checkout links, when given).
     const after = obj(p.after);
@@ -53,8 +59,8 @@ export function readConfig(raw) {
         at: after.at,
         prices: { ...out.prices, ...obj(after.prices) },
         checkout: {
-          monthly: str(ac.monthly) || out.checkout.monthly,
-          yearly: str(ac.yearly) || out.checkout.yearly,
+          monthly: link(ac.monthly) || out.checkout.monthly,
+          yearly: link(ac.yearly) || out.checkout.yearly,
         },
       };
     }
@@ -79,6 +85,7 @@ export function readConfig(raw) {
     prices: products.budget.prices,
     checkout: products.budget.checkout,
     productIds: [products.budget.productId, products.teams.productId].filter(Boolean),
+    storeId: /^d+$/.test(String(c.storeId || '').trim()) ? String(c.storeId).trim() : '',
     organizationId,
     benefitId,
     portalUrl: str(c.portalUrl),
@@ -221,7 +228,7 @@ export function needsRevalidate(ent, now = Date.now(), online = true) {
  * ok means "this key is good for use right now". productIds rejects keys from other products (the app always passes them,
  * see readConfig). A test-mode key (from Lemon Squeezy's Test mode) is rejected unless allowTestMode is true.
  */
-export function parseLemonSqueezy(body, productIds = [], allowTestMode = false) {
+export function parseLemonSqueezy(body, productIds = [], allowTestMode = false, storeId = '') {
   const b = body && typeof body === 'object' ? body : {};
   const lk = b.license_key || {};
   const status = lk.status || null;
@@ -243,6 +250,17 @@ export function parseLemonSqueezy(body, productIds = [], allowTestMode = false) 
         error: WRONG_PRODUCT,
       };
     }
+  }
+  // With a store id configured, a reply that names another store is refused too (Lemon Squeezy sends meta.store_id).
+  if (
+    storeId &&
+    b.license_key &&
+    typeof b.license_key === 'object' &&
+    b.meta &&
+    b.meta.store_id !== undefined
+  ) {
+    if (String(b.meta.store_id) !== String(storeId))
+      return { ok: false, status: 'invalid', error: WRONG_PRODUCT };
   }
   // Test-mode keys cost nothing to make, so they never unlock a live app. The flag can be on the key or in the meta block.
   const test = (b.license_key && b.license_key.test_mode === true) || (b.meta && b.meta.test_mode === true);
@@ -328,6 +346,7 @@ export function lemonSqueezyProvider(deps = {}) {
   const products = deps.products || (deps.productIds ? { budget: (deps.productIds || [])[0] } : {});
   const productIds = Object.values(products).filter(Boolean);
   const allowTestMode = deps.allowTestMode === true;
+  const storeId = deps.storeId || '';
   const productOf = (body) => {
     const pid = body && body.meta && body.meta.product_id;
     return PRODUCTS.find((p) => products[p] && Number(products[p]) === Number(pid)) || null;
@@ -369,7 +388,7 @@ export function lemonSqueezyProvider(deps = {}) {
         status: 'network',
         error: 'The payment service sent an unexpected reply. Try again later.',
       };
-    const r = parseLemonSqueezy(body, productIds, allowTestMode);
+    const r = parseLemonSqueezy(body, productIds, allowTestMode, storeId);
     const product = productOf(body);
     if (product) r.product = product; // the id in the reply decides which product this key is for
     // A recheck says which product it expects: a key that is really for the other one does not count.
@@ -487,6 +506,7 @@ export function getProvider(rawConfig = BILLING, deps = {}) {
     return lemonSqueezyProvider({
       products: { budget: config.products.budget.productId, teams: config.products.teams.productId },
       allowTestMode: config.allowTestMode,
+      storeId: config.storeId,
       proxyUrl: config.proxyUrl,
       ...deps,
     });
