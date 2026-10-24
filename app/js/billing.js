@@ -700,3 +700,28 @@ export function venueCheckoutUrl(url, venueId) {
     tail
   );
 }
+
+/* ---------- Staff Perks Credit amounts ---------- */
+
+/** The credit rate: a venue earns 25% of what each staff member with a Budget subscription pays. */
+export const CREDIT_RATE_PERCENT = 25;
+
+/** Cents in a shown price such as "$1.99" or "$20", or null when it is not a plain dollar amount. */
+export function priceCents(text) {
+  const m = /^\$(\d+)(?:\.(\d{1,2}))?$/.exec(String(text || '').trim());
+  return m ? Number(m[1]) * 100 + Number((m[2] || '').padEnd(2, '0') || 0) : null;
+}
+
+/**
+ * The credit one staff subscription earns its venue each month, in whole cents: 25% of the monthly price, or for a
+ * yearly subscription the yearly price divided by 12, times 25%. Rounded to the nearest cent for each subscription
+ * ($0.50 at $1.99 and $1.00 at $3.99 a month). null when the price is not a plain dollar amount.
+ */
+export function staffCreditCents(priceText, plan = 'monthly') {
+  const c = priceCents(priceText);
+  if (c === null) return null;
+  return Math.round((c * CREDIT_RATE_PERCENT) / (plan === 'yearly' ? 1200 : 100));
+}
+
+/** Whole cents as dollars: 50 -> "$0.50", 500 -> "$5.00". */
+export const dollars = (cents) => '$' + (cents / 100).toFixed(2);

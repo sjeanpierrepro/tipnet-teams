@@ -1290,3 +1290,43 @@ h4 {
 .job-fixed .hint {
   font-weight: 400;
 }
+
+/* ---------- manager page (teams/index.html) ---------- */
+.doc .stack {
+  margin: var(--s-3) 0;
+}
+.doc .card {
+  margin: 0 0 var(--s-3);
+}
+.doc .card h2,
+.doc .card h3 {
+  margin-top: 0;
+}
+.doc a.btn {
+  color: var(--accent-ink);
+  text-decoration: none;
+}
+.doc a.btn-secondary {
+  color: var(--text);
+}
+.doc ul {
+  margin: 0 0 var(--s-2);
+  padding-left: var(--s-4);
+  line-height: 1.55;
+}
+.doc .lead {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.doc .price {
+  font: 700 28px/1.1 var(--font-display);
+  letter-spacing: 0.02em;
+}
+.doc details.card summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+}
