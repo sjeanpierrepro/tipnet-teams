@@ -42,6 +42,10 @@ import {
 import {
   BILLING,
   providerInfo,
+  productOn,
+  displayPrices,
+  venueChoices,
+  venueCheckoutUrl,
   isUnlocked,
   activateKey,
   revalidate,
@@ -112,8 +116,12 @@ export function reset() {
 }
 
 const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-const ent = () => getState().settings.entitlement || null;
-const unlocked = () => isUnlocked(ent());
+/** Where each product's license is stored on this device. */
+export const SLOTS = { budget: 'entitlement', teams: 'teamsEntitlement' };
+const entOf = (product) => getState().settings[SLOTS[product]] || null;
+const unlockedOf = (product) => isUnlocked(entOf(product), Date.now(), { product });
+const ent = () => entOf('budget');
+const unlocked = () => unlockedOf('budget');
 const isOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
 
 /* ---------- billing boot: dev unlock, silent recheck ---------- */
@@ -121,38 +129,54 @@ let checking = false;
 async function recheck() {
   if (checking) return; // boot and the "online" event can fire together: one request is enough
   checking = true;
-  const S = getState();
-  const before = unlocked();
-  const asked = S.settings.entitlement;
+  const before = Object.keys(SLOTS).map(unlockedOf);
   try {
-    const next = await revalidate(asked, { online: isOnline() });
-    // Only store the answer if the key was not removed or replaced while we waited.
-    if (next && getState().settings.entitlement === asked) {
-      getState().settings.entitlement = next;
-      save();
+    for (const product of Object.keys(SLOTS)) {
+      const asked = entOf(product);
+      try {
+        const next = await revalidate(asked, { online: isOnline(), product });
+        // Only store the answer if the key was not removed or replaced while we waited.
+        if (next && entOf(product) === asked) {
+          getState().settings[SLOTS[product]] = next;
+          save();
+        }
+      } catch (e) {
+        /* a failed recheck never locks anyone; the 14 day grace covers it */
+      }
     }
-  } catch (e) {
-    /* a failed recheck never locks anyone; the 14 day grace covers it */
+  } finally {
+    checking = false;
   }
-  checking = false;
-  if (unlocked() !== before) bus.rerender();
+  if (
+    Object.keys(SLOTS)
+      .map(unlockedOf)
+      .some((v, i) => v !== before[i])
+  )
+    bus.rerender();
 }
 /** Called once from app.js after load. Never throws, never blocks the first paint. */
 export function bootBilling() {
   try {
     const S = getState();
-    const before = unlocked();
-    // A dev unlock only ever counts on localhost; drop one that arrived anywhere else.
-    if (S.settings.entitlement && S.settings.entitlement.plan === 'dev' && !isDevHost(location)) {
-      delete S.settings.entitlement;
-      save();
+    const before = Object.keys(SLOTS).map(unlockedOf);
+    for (const slot of Object.values(SLOTS)) {
+      // A dev unlock only ever counts on localhost; drop one that arrived anywhere else.
+      if (S.settings[slot] && S.settings[slot].plan === 'dev' && !isDevHost(location)) {
+        delete S.settings[slot];
+        save();
+      }
+      const dev = devEntitlement(location);
+      if (dev && !(S.settings[slot] && S.settings[slot].plan === 'dev')) {
+        S.settings[slot] = dev; // ?unlock=dev opens both products
+        save();
+      }
     }
-    const dev = devEntitlement(location);
-    if (dev && !(S.settings.entitlement && S.settings.entitlement.plan === 'dev')) {
-      S.settings.entitlement = dev;
-      save();
-    }
-    if (unlocked() !== before) bus.rerender(); // the Budget tab may already be on screen
+    if (
+      Object.keys(SLOTS)
+        .map(unlockedOf)
+        .some((v, i) => v !== before[i])
+    )
+      bus.rerender(); // a tab may already be on screen
     recheck();
     window.addEventListener('online', recheck);
   } catch (e) {
@@ -231,7 +255,7 @@ function sampleCard(S) {
 }
 
 /** Payments switched on (billing-config.js has a provider and a product id). */
-const paymentsOn = () => !!BILLING.provider;
+const paymentsOn = () => productOn('budget');
 
 /**
  * Open the Budget preview (it works while the tab is hidden), then focus `id` or the heading. From Setup with unsaved
@@ -270,7 +294,7 @@ export const upgradeBtn = (id) =>
  */
 export function upgradeTeaser() {
   if (unlocked()) return null;
-  const p = BILLING.prices;
+  const p = displayPrices('budget');
   return el(
     'section',
     { class: 'card stack upsell', id: 'budget-teaser', 'aria-labelledby': 'budget-teaser-h' },
@@ -303,45 +327,11 @@ export function upgradeTeaser() {
   );
 }
 
-function upgradeCard() {
-  const provider = getProvider();
-  const ready = !!provider && !!checkoutUrl('monthly') && !!checkoutUrl('yearly');
-  const buy = (plan, text) =>
-    ready
-      ? el(
-          'a',
-          {
-            class: plan === 'yearly' ? 'btn btn-block' : 'btn btn-secondary btn-block',
-            href: checkoutUrl(plan),
-            target: '_blank',
-            rel: 'noopener noreferrer',
-          },
-          text,
-        )
-      : el(
-          'button',
-          {
-            type: 'button',
-            class: plan === 'yearly' ? 'btn btn-block' : 'btn btn-secondary btn-block',
-            disabled: true,
-          },
-          text,
-        );
-  const p = BILLING.prices;
-  // Payments off: the preview is still reachable from the "TipNet Budget" cards, and says it is coming.
-  if (!paymentsOn())
-    return el(
-      'section',
-      { class: 'card stack', id: 'budget-upgrade', 'aria-labelledby': UPGRADE_H },
-      el('h2', { id: UPGRADE_H }, 'Unlock Budget'),
-      el('p', { class: 'note' }, p.monthly + ' a month or ' + p.yearly + ' a year.'),
-      el('p', null, el('strong', null, 'Coming soon')),
-      el(
-        'p',
-        { class: 'hint' },
-        'You’ll be able to unlock it here soon. Tips and pay estimates stay free, always.',
-      ),
-    );
+/**
+ * The "I have a license key" box, for Budget and TipNet Teams alike: the key is checked with the payment service, and the
+ * product id in its answer decides which one it unlocks on this device. text: what is said under the box.
+ */
+export function licenseKeyForm(hint) {
   const keyIn = el('input', {
     type: 'text',
     id: 'license-key',
@@ -355,7 +345,7 @@ function upgradeCard() {
     keyText = keyIn.value;
   });
   const kf = field('I have a license key', keyIn, {
-    hint: 'After you pay, the payment service emails you a key. Paste it here to unlock Budget on this device.',
+    hint: 'After you pay, the payment service emails you a key. ' + hint,
   });
   kf.setError(keyMsg);
   const go = el(
@@ -380,11 +370,106 @@ function upgradeCard() {
       return;
     }
     keyText = '';
-    getState().settings.entitlement = r.entitlement;
+    getState().settings[SLOTS[r.product] || SLOTS.budget] = r.entitlement;
     save();
-    toast('Budget is unlocked on this device.');
+    toast(
+      r.product === 'teams'
+        ? 'TipNet Teams is unlocked on this device.'
+        : 'Budget is unlocked on this device.',
+    );
     bus.rerender();
   });
+  return form;
+}
+
+/** The venue (TipNet Teams) a Budget payment earns a credit for: the one picked in "Credit goes to", else the active establishment's. */
+let creditVenueId = '';
+const creditVenue = (S) => {
+  const { list, defaultId } = venueChoices(S.workplaces, S.settings.activeWorkplaceId);
+  return list.find((v) => v.id === creditVenueId) || list.find((v) => v.id === defaultId) || null;
+};
+/** The checkout link for a Budget plan, with the venue added when an establishment has joined one. */
+export function budgetCheckoutHref(plan, S = getState()) {
+  const v = creditVenue(S);
+  return venueCheckoutUrl(checkoutUrl(plan), v && v.id);
+}
+/** The plain credit line and, with more than one venue, the "Credit goes to" choice. null with no venue. */
+function creditBlock(S, links) {
+  const v = creditVenue(S);
+  if (!v) return null;
+  const { list } = venueChoices(S.workplaces, S.settings.activeWorkplaceId);
+  const line = el('p', { class: 'hint', id: 'credit-line' });
+  const paint = () => {
+    const now = creditVenue(S);
+    line.textContent = now.name + ' gets a small credit on its TipNet Teams bill when you subscribe.';
+    for (const [plan, a] of links) a.setAttribute('href', budgetCheckoutHref(plan, S));
+  };
+  paint();
+  if (list.length < 2) return line;
+  const pick = el(
+    'select',
+    { id: 'credit-venue', 'aria-label': 'Credit goes to' },
+    list.map((x) => el('option', { value: x.id, selected: x.id === v.id }, x.name)),
+  );
+  pick.addEventListener('change', () => {
+    creditVenueId = pick.value;
+    paint();
+  });
+  return el(
+    'div',
+    { class: 'stack-sm' },
+    el('label', { for: 'credit-venue' }, 'Credit goes to: '),
+    pick,
+    line,
+  );
+}
+
+function upgradeCard() {
+  const S = getState();
+  const provider = getProvider();
+  const ready = !!provider && !!checkoutUrl('monthly') && !!checkoutUrl('yearly');
+  const links = [];
+  const buy = (plan, text) => {
+    if (!ready)
+      return el(
+        'button',
+        {
+          type: 'button',
+          class: plan === 'yearly' ? 'btn btn-block' : 'btn btn-secondary btn-block',
+          disabled: true,
+        },
+        text,
+      );
+    const a = el(
+      'a',
+      {
+        class: plan === 'yearly' ? 'btn btn-block' : 'btn btn-secondary btn-block',
+        href: budgetCheckoutHref(plan, S),
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      },
+      text,
+    );
+    links.push([plan, a]);
+    return a;
+  };
+  const p = displayPrices('budget');
+  // Payments off: the preview is still reachable from the "TipNet Budget" cards, and says it is coming.
+  if (!paymentsOn())
+    return el(
+      'section',
+      { class: 'card stack', id: 'budget-upgrade', 'aria-labelledby': UPGRADE_H },
+      el('h2', { id: UPGRADE_H }, 'Unlock Budget'),
+      el('p', { class: 'note' }, p.monthly + ' a month or ' + p.yearly + ' a year.'),
+      el('p', null, el('strong', null, 'Coming soon')),
+      el(
+        'p',
+        { class: 'hint' },
+        'You’ll be able to unlock it here soon. Tips and pay estimates stay free, always.',
+      ),
+      creditBlock(S, links),
+    );
+  const form = licenseKeyForm('Paste it here to unlock Budget or TipNet Teams on this device.');
   return el(
     'section',
     { class: 'card stack', id: 'budget-upgrade', 'aria-labelledby': UPGRADE_H },
@@ -412,6 +497,7 @@ function upgradeCard() {
             ', not by TipNet Teams.',
         )
       : el('p', { class: 'hint' }, 'Payments aren’t switched on yet.'),
+    creditBlock(S, links),
     form,
   );
 }
@@ -2653,20 +2739,25 @@ function otherIncomeCard(S) {
 }
 
 /* ---------- subscription ---------- */
-export function subscriptionCard() {
+export function subscriptionCard(product = 'budget') {
   const S = getState(),
-    e = ent();
+    e = entOf(product);
   if (!e) return null;
+  const slot = SLOTS[product];
+  const teams = product === 'teams';
   const d = displayEntitlement(e);
+  const price = displayPrices(product);
   const plan =
     d.plan === 'dev'
       ? 'Developer unlock (this computer only)'
       : d.plan === 'yearly'
-        ? 'Yearly, ' + BILLING.prices.yearly + ' a year'
+        ? 'Yearly, ' + price.yearly + ' a year'
         : d.plan === 'monthly'
-          ? 'Monthly, ' + BILLING.prices.monthly + ' a month'
-          : 'Budget subscription';
-  const status = unlocked() ? (d.status === 'on_trial' ? 'Trial' : 'Active') : 'Not active';
+          ? 'Monthly, ' + price.monthly + ' a month'
+          : teams
+            ? 'TipNet Teams subscription'
+            : 'Budget subscription';
+  const status = unlockedOf(product) ? (d.status === 'on_trial' ? 'Trial' : 'Active') : 'Not active';
   const remove = el('button', { type: 'button', class: 'btn btn-danger btn-small', id: 'sub-remove' });
   const removeMsg = el('p', { class: 'hint', role: 'status', id: 'sub-remove-msg' });
   // Only offered when the payment service could not be reached: removes the key here; its device slot stays used.
@@ -2676,9 +2767,11 @@ export function subscriptionCard() {
     'Remove anyway',
   );
   const dropKey = () => {
-    delete S.settings.entitlement;
+    delete S.settings[slot];
     save();
-    toast('Removed. Your budget is still saved here.');
+    toast(
+      teams ? 'Removed. Your team setup is still saved here.' : 'Removed. Your budget is still saved here.',
+    );
     bus.rerender();
   };
   anyway.addEventListener('click', dropKey);
@@ -2688,7 +2781,7 @@ export function subscriptionCard() {
     onConfirm: async () => {
       remove.disabled = true;
       removeMsg.textContent = '';
-      const r = await deactivate(S.settings.entitlement);
+      const r = await deactivate(S.settings[slot]);
       if (r.ok) return dropKey();
       // Not reached: say so, keep the key (the subscription still counts this device).
       remove.disabled = false;
@@ -2734,6 +2827,18 @@ export function subscriptionCard() {
       anyway,
     ),
     removeMsg,
+  );
+}
+
+/** One quiet line for the Setup screen, only for people who have a TipNet Teams subscription. */
+export function teamsSubscriptionLine() {
+  if (!entOf('teams')) return null;
+  return el(
+    'p',
+    { class: 'hint' },
+    'TipNet Teams subscription: ' +
+      (unlockedOf('teams') ? 'active' : 'not active') +
+      '. Backup codes do not include your license key.',
   );
 }
 

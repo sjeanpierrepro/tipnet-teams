@@ -18,6 +18,7 @@ import {
   updateAction,
 } from './ui/common.js';
 import { budgetVisible, reloadConfig } from './billing.js';
+import { managersCard } from './ui/managers.js';
 import {
   restoreFromCode,
   NEWER_BACKUP_MSG,
@@ -185,6 +186,11 @@ function render() {
           const ask = explainPromptCard();
           if (ask) root.prepend(ask);
         }
+      }
+      // "For managers: TipNet Teams" sits just above the Budget card at the bottom of Setup, until Teams is unlocked here.
+      if (current === 'setup' && !setup.guidedOnScreen()) {
+        const managers = managersCard();
+        if (managers) root.append(managers);
       }
       // The "TipNet Budget" card, last on the page (not during guided setup), while Budget isn't unlocked here.
       // On Pay periods the locked Budget goal card takes its place (one locked card per page, owner request).

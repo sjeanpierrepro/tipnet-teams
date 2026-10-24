@@ -35,8 +35,9 @@ import {
   tipoutSetup,
   carryTicks,
 } from '../math.js';
-import { budgetVisible, isUnlocked, BILLING } from '../billing.js';
-import { subscriptionLine, openPreview } from './budget.js';
+import { budgetVisible, isUnlocked, productOn } from '../billing.js';
+import { teamsUnlocked } from '../entitlements.js';
+import { subscriptionLine, subscriptionCard, openPreview } from './budget.js';
 import {
   el,
   clear,
@@ -1932,7 +1933,7 @@ function addWorkplaceCard(S) {
       { class: 'hint', id: 'wp-limit' },
       unlocked
         ? 'You can have up to ' + workplaceLimit(true) + ' establishments.'
-        : !BILLING.provider
+        : !productOn('budget')
           ? // payments off: no "unlock" to push, Budget can't be bought yet
             'You can have up to ' +
             workplaceLimit(false) +
@@ -3138,6 +3139,7 @@ function fullPage(root, S, active) {
   renderBackup(backupHost);
   const ctx = { S }; // the shared cards only use the state
   const sub = budgetVisible(S.settings.entitlement) ? subscriptionLine() : null; // hidden while payments are off
+  const teamsSub = S.settings.teamsEntitlement ? subscriptionCard('teams') : null; // only with a team key on this device
   const lastBackup = () => {
     const at = getState().settings.lastBackupAt;
     return 'Last backup: ' + (at ? fmtShort(todayISO(new Date(at))) : 'never');
@@ -3197,6 +3199,14 @@ function fullPage(root, S, active) {
             'Budget subscription',
             () => (isUnlocked(getState().settings.entitlement) ? 'Active' : 'Not active'),
             sub,
+          )
+        : null,
+      teamsSub
+        ? foldRow(
+            'teamsub',
+            'TipNet Teams subscription',
+            () => (teamsUnlocked() ? 'Active' : 'Not active'),
+            inner(teamsSub),
           )
         : null,
       foldRow('privacy', 'Privacy and terms', () => 'Your numbers stay on this device', [

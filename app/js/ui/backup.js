@@ -94,9 +94,17 @@ export function renderInstall(host) {
   );
 }
 
-const deviceEntitlement = () => {
+/** The licenses on this device (Budget and Teams): a restore or erase never touches them. */
+const deviceLicenses = () => {
   const st = getState();
-  return (st && st.settings && st.settings.entitlement) || null;
+  const s = (st && st.settings) || {};
+  return { entitlement: s.entitlement || null, teamsEntitlement: s.teamsEntitlement || null };
+};
+const putLicenses = (target, lic) => {
+  for (const k of Object.keys(lic)) {
+    delete target.settings[k];
+    if (lic[k]) target.settings[k] = lic[k];
+  }
 };
 /** The Setup "home screen" step answer belongs to this browser (backups never carry it): keep it as it is now. */
 const keepDeviceStep = (target) => {
@@ -131,9 +139,7 @@ export function undoRestore() {
   if (!beforeRestore) return false;
   const prev = beforeRestore;
   beforeRestore = null;
-  const ent = deviceEntitlement(); // the license stays as it is now on this device
-  delete prev.settings.entitlement;
-  if (ent) prev.settings.entitlement = ent;
+  putLicenses(prev, deviceLicenses()); // the licenses stay as they are now on this device
   keepDeviceStep(prev);
   setState(prev);
   applyTheme(getState().settings.theme);
@@ -148,9 +154,7 @@ function restoreState(next) {
   } catch (e) {
     beforeRestore = null;
   }
-  const ent = deviceEntitlement();
-  delete next.settings.entitlement;
-  if (ent) next.settings.entitlement = ent;
+  putLicenses(next, deviceLicenses());
   keepDeviceStep(next);
   setState(next);
   const s = getState();
@@ -173,9 +177,9 @@ export function restoreFromFileText(text) {
 
 /** Erase all nights and settings. Erasing your data does not cancel or lose your subscription. */
 export function eraseEverything() {
-  const ent = deviceEntitlement();
+  const lic = deviceLicenses();
   const fresh = erasedState();
-  if (ent) fresh.settings.entitlement = ent;
+  putLicenses(fresh, lic);
   setState(fresh);
   applyTheme('auto');
   flush();

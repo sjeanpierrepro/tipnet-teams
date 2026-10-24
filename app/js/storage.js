@@ -31,11 +31,11 @@ const STATE_KEY = 'state';
 /* ---------- state shape ---------- */
 /**
  * v3 state:
- *   workplaces: [{id, name, profile, calib, setupDone?, guideSkipped?, noDeductions?}]  one per restaurant, each with its own
+ *   workplaces: [{id, name, profile, calib, setupDone?, guideSkipped?, noDeductions?, venue?: {id, name}}]  one per restaurant, each with its own
  *               pay schedule, paystub, jobs and tip-outs (profile) and its own "Check my accuracy" history (calib).
  *   nights:     [{..., workplaceId}]  every night belongs to one restaurant.
  *   settings:   {theme:'auto'|'light'|'dark', lastTab, activeWorkplaceId, periodsFilter?, dayCutoffHour?, guidedDraft?,
- *                lastBackupAt?, backupNudgeUntil?, nightsSinceBackup?, backupNightsAt?, iosNoteSeen?, explanations? ('hide'; absent = show), explainPromptSeen?, installStepSeen?, wordingV38?, entitlement?,
+ *                lastBackupAt?, backupNudgeUntil?, nightsSinceBackup?, backupNightsAt?, iosNoteSeen?, explanations? ('hide'; absent = show), explainPromptSeen?, installStepSeen?, wordingV38?, entitlement? (TipNet Budget license), teamsEntitlement? (TipNet Teams license),
  *                reminder?: {time:'HH:MM', days:[0-6, Monday first], addedAt, uid, seq}}
  *               (shared by every restaurant)
  *   budget:     see budget.js (shared: bills are paid from all money; a goal may name the restaurant it is saved from, fundedBy).
@@ -493,15 +493,28 @@ function cleanSettings(x, ids) {
   if (s.explainPromptSeen === true) out.explainPromptSeen = true; // the Tonight "hide the explanations?" card was answered
   if (s.installStepSeen === true) out.installStepSeen = true; // the Setup "home screen" step was answered on this device (never taken from a backup)
   // The license entitlement is device-only. decodeBackup strips it before migrate; here we only keep its known plain fields.
-  if (isObj(s.entitlement)) {
+  // Two products, two licenses: entitlement is TipNet Budget's, teamsEntitlement is TipNet Teams'. Same plain fields.
+  for (const slot of ['entitlement', 'teamsEntitlement']) {
+    if (!isObj(s[slot])) continue;
     const e = {};
-    ['plan', 'key', 'instanceId', 'status', 'validatedAt', 'expiresAt'].forEach((k) => {
-      const v = s.entitlement[k];
+    ['product', 'plan', 'key', 'instanceId', 'status', 'validatedAt', 'expiresAt'].forEach((k) => {
+      const v = s[slot][k];
       if (v === null || typeof v === 'string' || typeof v === 'number') e[k] = v;
     });
-    out.entitlement = e;
+    out[slot] = e;
   }
   return out;
+}
+
+/**
+ * A joined venue, {id, name}, or null. id: 10 to 16 characters of letters, digits, _ and -. name: text, at most 40
+ * characters (cut, never refused). Anything else is dropped, so a hand-made backup cannot put odd text in a checkout link.
+ */
+export function cleanVenue(v) {
+  if (!isObj(v) || typeof v.id !== 'string' || typeof v.name !== 'string') return null;
+  if (!/^[A-Za-z0-9_-]{10,16}$/.test(v.id)) return null;
+  const name = v.name.trim().slice(0, 40);
+  return name ? { id: v.id, name } : null;
 }
 
 /** The profile fields, each coerced to a safe shape. startFallback: the start date used when it is missing or broken. */
@@ -789,6 +802,8 @@ function migrateUnsafe(input, today) {
     if (w.setupDone !== undefined && w.setupDone !== null) out.setupDone = !!w.setupDone;
     if (w.guideSkipped === true) out.guideSkipped = true; // "Skip guided setup": the full Setup page, not set up until the basics are in
     if (w.noDeductions === true) out.noDeductions = true; // "My paystub has no deductions"
+    const venue = cleanVenue(w.venue); // the venue (TipNet Teams) this establishment joined: kept when valid, dropped when not
+    if (venue) out.venue = venue;
     return out;
   });
   // Lock first, then pin: an older night's "everyone or nobody" becomes the people it is worked out with (its snapshot's
@@ -886,6 +901,7 @@ function fromB64(b64) {
 export function backupData(state) {
   const copy = { ...state, settings: { ...((state && state.settings) || {}) } };
   delete copy.settings.entitlement;
+  delete copy.settings.teamsEntitlement;
   delete copy.settings.guidedDraft;
   delete copy.settings.installStepSeen;
   delete copy._savedAt;
@@ -913,11 +929,13 @@ function fromBackupObject(d) {
   // The license (entitlement) belongs to this device and is only ever set by activating a key.
   if (d.settings && typeof d.settings === 'object') {
     delete d.settings.entitlement;
+    delete d.settings.teamsEntitlement;
     delete d.settings.guidedDraft;
     delete d.settings.installStepSeen;
   }
   const out = migrate(d);
   delete out.settings.entitlement;
+  delete out.settings.teamsEntitlement;
   delete out.settings.guidedDraft;
   delete out.settings.installStepSeen;
   return out;

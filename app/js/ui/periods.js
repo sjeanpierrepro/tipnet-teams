@@ -33,7 +33,7 @@ import {
 } from '../math.js';
 import { businessDate, cutoffFromSettings, moneyTypo, readMoney } from '../inputs.js';
 import { monthlyNeeds, periodsPerYear, perPeriodC, extraGoalC } from '../budget.js';
-import { BILLING, isUnlocked } from '../billing.js';
+import { displayPrices, isUnlocked, productOn } from '../billing.js';
 import { openPreview, upgradeBtn } from './budget.js';
 import {
   isSetUp,
@@ -1480,9 +1480,13 @@ function goalCard(S, today, shown, all) {
       el(
         'p',
         null,
-        el('strong', null, BILLING.prices.monthly + ' a month or ' + BILLING.prices.yearly + ' a year'),
+        el(
+          'strong',
+          null,
+          displayPrices('budget').monthly + ' a month or ' + displayPrices('budget').yearly + ' a year',
+        ),
       ),
-      BILLING.provider
+      productOn('budget')
         ? null
         : el(
             'p',

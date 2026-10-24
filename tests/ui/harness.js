@@ -73,7 +73,8 @@ let bootN = 0;
  *   seed:     a state object written to localStorage (tipnet.v2) before the app starts. Default: first run.
  *   time:     the local time of day the clock shows at boot ('HH:MM', default DEFAULT_TIME), on today's date; null: no
  *             pin (required with mock.timers).
- *   payments: true switches payments on in memory (BILLING.provider) before the app starts.
+ *   payments: true switches payments on in memory (BILLING.provider, a TipNet Budget product id) before the app starts.
+ *             'both' also gives TipNet Teams a product id.
  */
 export async function boot({
   url = 'http://localhost/',
@@ -121,8 +122,13 @@ export async function boot({
   common.install.last = null;
   common.exampleShown.seen = false;
   BILLING.provider = payments ? 'lemonsqueezy' : null;
-  BILLING.checkout.monthly = '';
-  BILLING.checkout.yearly = '';
+  BILLING.products.budget.productId = payments ? '111' : '';
+  BILLING.products.teams.productId = payments === 'both' ? '222' : '';
+  for (const p of ['budget', 'teams']) {
+    BILLING.products[p].checkout.monthly = '';
+    BILLING.products[p].checkout.yearly = '';
+    delete BILLING.products[p].after;
+  }
 
   await import(pathToFileURL(path.join(APP_DIR, 'js/app.js')).href + '?w=' + ++bootN);
   const app = doc.getElementById('app');

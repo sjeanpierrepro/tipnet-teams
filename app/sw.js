@@ -29,6 +29,7 @@ const SHELL = [
   'js/storage.js',
   'js/billing.js',
   'js/billing-config.js',
+  'js/entitlements.js',
   'js/budget.js',
   'js/inputs.js',
   'js/ics.js',
@@ -39,6 +40,7 @@ const SHELL = [
   'js/ui/install.js',
   'js/ui/common.js',
   'js/ui/budget.js',
+  'js/ui/managers.js',
   'js/vendor/qrcode.js',
 ];
 

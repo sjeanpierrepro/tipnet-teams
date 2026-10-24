@@ -1,41 +1,84 @@
-// TipNet billing: license-key entitlement for the paid budgeting add-on. No server of our own.
+// TipNet Teams billing: license-key entitlements for two products, TipNet Budget (staff) and TipNet Teams (venues). Each
+// product has its own stored license state. No server of our own.
 // Pure logic (isUnlocked, needsRevalidate, maskKey, parsers, provider) works in Node with fetch injected.
 // The only network calls ever made go to the payment provider, and only when the user
 // activates a key or a revalidation is due (at most once per 24 hours). They send the
 // license key and a random device name, never budget or pay data.
 import * as configModule from './billing-config.js';
 
+const WRONG_PRODUCT =
+  'This key is real, but it is for a different product, not TipNet Teams or TipNet Budget.';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The two things on sale. budget: TipNet Budget for staff. teams: TipNet Teams for venues. */
+export const PRODUCTS = ['budget', 'teams'];
+const DEFAULT_PRICES = {
+  budget: { monthly: '$1.99', yearly: '$20' },
+  teams: { monthly: '$59', yearly: '$500' },
+};
 
 /**
  * billing-config.js is served from the cache and refreshed in the background (see sw.js), so it and this file can be from
  * different versions. Read the config defensively: missing or extra fields are fine, and a missing export is too.
+ * Shape: { provider, allowTestMode, proxyUrl, portalUrl, budget: {productId, prices, checkout, after?}, teams: {...} }.
+ * The older flat Budget fields (productIds, prices, checkout) still read as the budget product.
+ * The result also keeps budget's checkout, prices and productIds at the top, for the code that predates two products.
  */
 export function readConfig(raw) {
   const c = raw && typeof raw === 'object' ? raw : {};
   const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   const str = (v) => (typeof v === 'string' ? v : '');
-  // Product ids are mandatory: without at least one, a license key from ANY Lemon Squeezy store would unlock Budget,
-  // so payments count as OFF (locked, no network calls) until the owner fills productIds in.
-  const productIds = (Array.isArray(c.productIds) ? c.productIds : []).filter(
-    (v) =>
-      (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) && Number.isFinite(Number(v)),
-  );
-  // Polar needs both ids (a key from another Polar organization or benefit must never unlock Budget).
+  const idOk = (v) =>
+    (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) && Number.isFinite(Number(v));
+  // Product ids are mandatory: without one, a license key from ANY Lemon Squeezy store would unlock the product, so
+  // that product counts as OFF (locked, no network calls) until the owner fills its id in.
+  const legacyIds = (Array.isArray(c.productIds) ? c.productIds : []).filter(idOk);
+  const product = (name) => {
+    const p = obj(c[name] || obj(c.products)[name]); // c.products: an already-read config reads back the same
+    const base = DEFAULT_PRICES[name];
+    const flat = name === 'budget'; // the old flat fields belong to Budget
+    const ids = flat ? legacyIds : [];
+    const productId = idOk(p.productId) ? String(p.productId).trim() : ids.length ? String(ids[0]) : '';
+    const links = obj(p.checkout || (flat ? c.checkout : null));
+    const out = {
+      productId,
+      prices: { ...base, ...obj(p.prices || (flat ? c.prices : null)) },
+      checkout: { monthly: str(links.monthly), yearly: str(links.yearly) },
+    };
+    // A scheduled price change: from `at` on, the screens show these prices (and checkout links, when given).
+    const after = obj(p.after);
+    if (Number.isFinite(Date.parse(after.at)) && obj(after.prices)) {
+      const ac = obj(after.checkout);
+      out.after = {
+        at: after.at,
+        prices: { ...out.prices, ...obj(after.prices) },
+        checkout: {
+          monthly: str(ac.monthly) || out.checkout.monthly,
+          yearly: str(ac.yearly) || out.checkout.yearly,
+        },
+      };
+    }
+    return out;
+  };
+  const products = { budget: product('budget'), teams: product('teams') };
+  // Polar needs both ids (a key from another Polar organization or benefit must never unlock Budget). Polar sells Budget only.
   const organizationId = str(c.organizationId).trim();
   const benefitId = str(c.benefitId).trim();
   const polarOk = UUID.test(organizationId) && UUID.test(benefitId);
+  const lsOk = !!(products.budget.productId || products.teams.productId);
   const provider =
-    c.provider === 'lemonsqueezy' && productIds.length
+    c.provider === 'lemonsqueezy' && lsOk
       ? 'lemonsqueezy'
       : c.provider === 'polar' && polarOk
         ? 'polar'
         : null; // unknown providers, or missing ids, count as off
   return {
     provider,
-    prices: { monthly: '$1.99', yearly: '$20', ...obj(c.prices) },
-    checkout: { monthly: str(obj(c.checkout).monthly), yearly: str(obj(c.checkout).yearly) },
-    productIds,
+    products,
+    // budget's, shared (same objects) so a change to one shows in the other
+    prices: products.budget.prices,
+    checkout: products.budget.checkout,
+    productIds: [products.budget.productId, products.teams.productId].filter(Boolean),
     organizationId,
     benefitId,
     portalUrl: str(c.portalUrl),
@@ -65,6 +108,7 @@ export const GRACE_MS = 14 * 24 * 3600 * 1000; // offline grace after last succe
 export const REVALIDATE_MS = 24 * 3600 * 1000; // at most one silent check per day
 const LS_API = 'https://api.lemonsqueezy.com/v1/licenses';
 const POLAR_API = 'https://api.polar.sh/v1/customer-portal/license-keys';
+const LS_PORTAL = 'https://app.lemonsqueezy.com/my-orders';
 const POLAR_PORTAL = 'https://polar.sh/tipnet/portal';
 
 /**
@@ -87,7 +131,8 @@ export function providerInfo(rawConfig = BILLING) {
     name: 'Lemon Squeezy',
     privacyUrl: 'https://www.lemonsqueezy.com/privacy',
     privacyLabel: 'lemonsqueezy.com/privacy',
-    manageUrl: 'https://app.lemonsqueezy.com/my-orders',
+    // portalUrl may hold the store's own billing page (https://STORE.lemonsqueezy.com/billing); My Orders works for any store.
+    manageUrl: config.portalUrl.startsWith('https://') ? config.portalUrl : LS_PORTAL,
     cancelWhere: "Lemon Squeezy's My Orders page",
   };
 }
@@ -120,18 +165,19 @@ const toMs = (v) => {
 };
 
 /**
- * Is the add-on unlocked right now? ent: state.settings.entitlement or null. now: ms.
+ * Is the product unlocked right now? ent: that product's stored entitlement (state.settings.entitlement for Budget,
+ * state.settings.teamsEntitlement for Teams) or null. now: ms.
  * Two ways in: (1) a dev entitlement, honored only on localhost; (2) a real one, which needs a license key AND
  * the device seat (instanceId) the payment service handed back, payments switched on, status active/on_trial,
  * and a last check within 14 days that is not in the future. Anything hand-made fails at least one of these.
- * opts: { loc, config } for tests.
+ * opts: { loc, config, product } for tests; product is 'budget' (default) or 'teams' and must be switched on in the config.
  */
 export function isUnlocked(ent, now = Date.now(), opts = {}) {
   if (!ent || typeof ent !== 'object') return false;
   const loc = 'loc' in opts ? opts.loc : globalThis.location;
   if (ent.plan === 'dev') return isDevHost(loc);
   const config = 'config' in opts ? readConfig(opts.config) : BILLING;
-  if (!config.provider) return false;
+  if (!productOn(opts.product || 'budget', config)) return false;
   if (
     typeof ent.key !== 'string' ||
     !ent.key ||
@@ -145,10 +191,21 @@ export function isUnlocked(ent, now = Date.now(), opts = {}) {
   return true;
 }
 
+/**
+ * Is this product on sale? Payments need a provider, and Lemon Squeezy also needs the product's id (so a key from another
+ * product, or another store, never unlocks it). Polar sells Budget only.
+ */
+export function productOn(product, rawConfig = BILLING) {
+  const config = readConfig(rawConfig);
+  if (!config.provider) return false;
+  if (config.provider === 'polar') return product === 'budget';
+  return !!(config.products[product] && config.products[product].productId);
+}
+
 /** Should the Budget tab be visible? Only when payments are on, or this device already has an unlocked add-on (or dev unlock). */
 export function budgetVisible(ent, now = Date.now(), opts = {}) {
   const config = 'config' in opts ? readConfig(opts.config) : BILLING;
-  return !!config.provider || isUnlocked(ent, now, opts);
+  return productOn('budget', config) || isUnlocked(ent, now, opts);
 }
 
 /** True when a silent recheck is due: has a real key, online, and last check is 24h+ old. */
@@ -183,7 +240,7 @@ export function parseLemonSqueezy(body, productIds = [], allowTestMode = false) 
       return {
         ok: false,
         status: 'invalid',
-        error: 'This key is real, but it is for a different product, not TipNet Budget.',
+        error: WRONG_PRODUCT,
       };
     }
   }
@@ -229,7 +286,7 @@ export function parsePolar(body, benefitId = '', organizationId = '') {
     return {
       ok: false,
       status: 'invalid',
-      error: 'This key is real, but it is for a different product, not TipNet Budget.',
+      error: WRONG_PRODUCT,
     };
   }
   // Polar checks expiry itself (an expired key is a 404 or 403), so expires_at is never compared with this device's
@@ -267,10 +324,16 @@ function friendlyError(msg) {
  */
 export function lemonSqueezyProvider(deps = {}) {
   const f = deps.fetch || ((...a) => globalThis.fetch(...a));
-  const productIds = deps.productIds || [];
+  // products: { budget: id, teams: id }. Their ids are the whole allow-list; productIds is the older Budget-only form.
+  const products = deps.products || (deps.productIds ? { budget: (deps.productIds || [])[0] } : {});
+  const productIds = Object.values(products).filter(Boolean);
   const allowTestMode = deps.allowTestMode === true;
+  const productOf = (body) => {
+    const pid = body && body.meta && body.meta.product_id;
+    return PRODUCTS.find((p) => products[p] && Number(products[p]) === Number(pid)) || null;
+  };
   const base = (deps.proxyUrl || LS_API).replace(/\/$/, '');
-  async function call(path, fields) {
+  async function call(path, fields, expected = null) {
     let res;
     try {
       res = await f(`${base}/${path}`, {
@@ -306,7 +369,13 @@ export function lemonSqueezyProvider(deps = {}) {
         status: 'network',
         error: 'The payment service sent an unexpected reply. Try again later.',
       };
-    return parseLemonSqueezy(body, productIds, allowTestMode);
+    const r = parseLemonSqueezy(body, productIds, allowTestMode);
+    const product = productOf(body);
+    if (product) r.product = product; // the id in the reply decides which product this key is for
+    // A recheck says which product it expects: a key that is really for the other one does not count.
+    if (expected && r.ok && productIds.length && product !== expected)
+      return { ok: false, status: 'invalid', error: WRONG_PRODUCT };
+    return r;
   }
   return {
     id: 'lemonsqueezy',
@@ -315,8 +384,8 @@ export function lemonSqueezyProvider(deps = {}) {
         license_key: String(key || '').trim(),
         instance_name: instanceName || randomInstanceName(),
       }),
-    validate: (key, instanceId) =>
-      call('validate', { license_key: String(key || '').trim(), instance_id: instanceId }),
+    validate: (key, instanceId, expected = null) =>
+      call('validate', { license_key: String(key || '').trim(), instance_id: instanceId }, expected),
     deactivate: (key, instanceId) =>
       call('deactivate', { license_key: String(key || '').trim(), instance_id: instanceId }),
   };
@@ -416,7 +485,7 @@ export function getProvider(rawConfig = BILLING, deps = {}) {
   const config = readConfig(rawConfig);
   if (config.provider === 'lemonsqueezy') {
     return lemonSqueezyProvider({
-      productIds: config.productIds,
+      products: { budget: config.products.budget.productId, teams: config.products.teams.productId },
       allowTestMode: config.allowTestMode,
       proxyUrl: config.proxyUrl,
       ...deps,
@@ -437,7 +506,7 @@ export function getProvider(rawConfig = BILLING, deps = {}) {
 
 /**
  * User pastes a key. Returns {ok, entitlement?, error?}. On ok, the caller stores entitlement in
- * state.settings.entitlement and saves. plan ('monthly'|'yearly') is optional and stored as given. Never throws.
+ * state.settings.entitlement (Budget) or state.settings.teamsEntitlement (Teams), as `product` says, and saves. plan ('monthly'|'yearly') is optional and stored as given. Never throws.
  */
 export async function activateKey(
   key,
@@ -450,7 +519,9 @@ export async function activateKey(
   if (!r.ok) return { ok: false, error: r.error || 'That key did not work.' };
   return {
     ok: true,
+    product: r.product || 'budget',
     entitlement: {
+      product: r.product || 'budget',
       plan: plan || r.plan || null,
       key: k,
       instanceId: r.instanceId || null,
@@ -472,10 +543,11 @@ export async function revalidate(
     provider = getProvider(),
     now = Date.now(),
     online = typeof navigator === 'undefined' ? true : navigator.onLine,
+    product = 'budget',
   } = {},
 ) {
   if (!provider || !needsRevalidate(ent, now, online)) return null;
-  const r = await provider.validate(ent.key, ent.instanceId);
+  const r = await provider.validate(ent.key, ent.instanceId, product);
   if (r.status === 'network') return null;
   // A definite "no" (valid:false) locks even if the key itself is still active, e.g. this device's instance was
   // removed. 'invalid' is not an unlocking status, so isUnlocked treats it as locked.
@@ -553,7 +625,58 @@ export function isDevHost(loc = globalThis.location) {
   return !!loc && (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1');
 }
 
-/** Checkout link for a plan ('monthly'|'yearly'), or '' if not set up yet. */
-export function checkoutUrl(plan, rawConfig = BILLING) {
-  return readConfig(rawConfig).checkout[plan] || '';
+/** True from the moment a product's scheduled price change takes effect. */
+const changed = (p, now) => !!p.after && now >= Date.parse(p.after.at);
+
+/** What the screens show for a product right now: { monthly, yearly } (the scheduled change applies from its date). */
+export function displayPrices(product = 'budget', rawConfig = BILLING, now = Date.now()) {
+  const p = readConfig(rawConfig).products[product];
+  return { ...(changed(p, now) ? p.after.prices : p.prices) };
+}
+
+/** Checkout link for a plan ('monthly'|'yearly') of a product (default Budget), or '' if not set up yet. */
+export function checkoutUrl(plan, rawConfig = BILLING, product = 'budget', now = Date.now()) {
+  const p = readConfig(rawConfig).products[product];
+  return (changed(p, now) ? p.after.checkout : p.checkout)[plan] || '';
+}
+
+/* ---------- Staff Perks Credit: which venue a Budget payment is for ---------- */
+
+/**
+ * The venues the establishments have joined (workplace.venue = {id, name}, set by the venue code in TipNet Teams), one entry
+ * per venue id, in establishment order, and the one to credit by default: the active establishment's venue, else the first.
+ * Returns { list: [{id, name}], defaultId } (defaultId '' when none).
+ */
+export function venueChoices(workplaces, activeId) {
+  const list = [];
+  let defaultId = '';
+  for (const w of Array.isArray(workplaces) ? workplaces : []) {
+    const v = w && w.venue;
+    if (!v || typeof v.id !== 'string' || !v.id || list.some((x) => x.id === v.id)) continue;
+    list.push({ id: v.id, name: String(v.name || '') });
+  }
+  const mine = (Array.isArray(workplaces) ? workplaces : []).find((w) => w && w.id === activeId);
+  if (mine && mine.venue && list.some((x) => x.id === mine.venue.id)) defaultId = mine.venue.id;
+  else if (list.length) defaultId = list[0].id;
+  return { list, defaultId };
+}
+
+/**
+ * Adds Lemon Squeezy custom data to a checkout link: checkout[custom][venue_id]=<id> (the format in Lemon Squeezy's
+ * "Passing custom data" help page). The brackets stay as the page writes them, the id is URL-encoded. It comes back in
+ * the order, subscription and license-key webhooks as meta.custom_data.venue_id. With no venue id or no link, the link is
+ * returned as it is.
+ */
+export function venueCheckoutUrl(url, venueId) {
+  if (!url || !venueId) return url || '';
+  const hash = url.indexOf('#');
+  const base = hash < 0 ? url : url.slice(0, hash);
+  const tail = hash < 0 ? '' : url.slice(hash);
+  return (
+    base +
+    (base.includes('?') ? '&' : '?') +
+    'checkout[custom][venue_id]=' +
+    encodeURIComponent(venueId) +
+    tail
+  );
 }

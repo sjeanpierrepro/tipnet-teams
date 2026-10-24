@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { boot, realState } from './harness.js';
 import { exampleBudget } from '../../app/js/budget.js';
-import { BILLING } from '../../app/js/billing.js';
 
 const DEV = 'http://localhost/?unlock=dev';
 
@@ -35,6 +34,10 @@ test('budget: bill checkboxes and goal amount fields have names that include the
 });
 
 test('budget: an unlocked user who has not finished setup can still manage the subscription', async () => {
+  const was = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new TypeError('Failed to fetch'); // payments are on: a recheck must never reach the real service
+  };
   const page = await boot({
     url: 'http://localhost/',
     payments: true,
@@ -59,14 +62,14 @@ test('budget: an unlocked user who has not finished setup can still manage the s
     assert.ok(page.button('Remove from this device'), 'remove button reachable');
     assert.doesNotMatch(t, /ABCD-1234-EFGH-5678/, 'key is masked');
   } finally {
+    await page.settle();
+    globalThis.fetch = was;
     await page.close();
   }
 });
 
 test('budget: "Remove from this device" while offline keeps the key, says so, and offers Remove anyway', async () => {
   const was = globalThis.fetch;
-  const ids = BILLING.productIds;
-  BILLING.productIds = [1]; // payments really on, so the app asks the service
   let calls = 0;
   globalThis.fetch = async () => {
     calls++;
@@ -106,7 +109,6 @@ test('budget: "Remove from this device" while offline keeps the key, says so, an
     assert.equal(page.state().settings.entitlement, undefined, 'removed on request');
   } finally {
     globalThis.fetch = was;
-    BILLING.productIds = ids;
     await page.close();
   }
 });
