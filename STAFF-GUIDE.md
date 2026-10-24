@@ -1,4 +1,4 @@
-# TipNet: Staff Guide
+# TipNet Teams: Staff Guide
 
 Short guide for bartenders. Works on a phone.
 
@@ -6,9 +6,7 @@ Short guide for bartenders. Works on a phone.
 
 ## 1. Open TipNet
 
-Go to **https://tipmynet.com** (or tap the link your bar gives you). Bookmark it.
-
-**Used TipNet before at the old link (sjeanpierrepro.github.io/tipnet)?** Your nights stay with the old app. Open the old app from your home screen (or open the old link the way you always did), go to Setup > Backups > **Save a backup file** (**Copy backup code** works too). Then open https://tipmynet.com, install it (step 2), and restore that file **before** you enter anything there (restoring replaces what is already saved). After that you can delete the old icon.
+Open the link your venue or bar gives you (the poster has a QR code for it). Bookmark it.
 
 ## 2. Add it to your home screen
 
@@ -103,4 +101,23 @@ At the bottom of **Pay periods**, **So far this pay period** adds up the nights 
 ## 6. Budget (optional, paid)
 The Budget tab shows how much you can spend before your next payday, after bills and savings. With two establishments it counts both paychecks and shows whose check comes next; each goal asks **Save from which paycheck?** Add your bills (name, amount, day of the month), spending categories (like groceries) and goals. A new bill counts from the day you add it; if its due day already passed this month, TipNet asks **Already paid this month?** (ticked unless you untick it). Tick "Paid" when a bill is paid, and use "Log spending" when you buy something. Budget never guesses ahead: your next check is worked out only from the nights you have logged for its pay period (with none logged it shows $0), and everything else comes from the numbers you type. The check and the taxes in it are estimates. Budget is not part of the free app.
 
-**Where to find it:** at the very bottom of **Tonight**, **Pay periods** and **Setup** there is a **TipNet Budget** card ($1.99 a month or $20 a year). Tap **See what's inside** for a preview, or **Upgrade** to go straight to the plans (there's an **Upgrade** button in the preview too). Already have a key? Paste it on the same screen, under **I have a license key**. Until payments are switched on, the card says **Coming soon**. Once Budget is unlocked on your phone, the card goes away.
+**Where to find it:** at the very bottom of **Tonight**, **Pay periods** and **Setup** there is a **TipNet Budget** card ($1.99 a month or $20 a year through Dec 31, 2026, then $3.99 a month or $30 a year). Tap **See what's inside** for a preview, or **Upgrade** to go straight to the plans (there's an **Upgrade** button in the preview too). Already have a key? Paste it on the same screen, under **I have a license key**. Until payments are switched on, the card says **Coming soon**. Once Budget is unlocked on your phone, the card goes away.
+
+---
+
+# TipNet Teams: staff sections
+
+TipNet Teams is the business edition of TipNet. For you, the staff member, the app is the same free app. These notes cover what is new.
+
+## Your venue and your pay
+If your venue uses TipNet Teams, your manager can hand you a QR poster to join the venue. **Your numbers stay private.** Your manager never sees what you earn, keep or spend, and joining does not share your nights, your paystub or your budget with the venue.
+
+## Budget and your venue's credit (your choice)
+**TipNet Budget** is the optional paid add-on described in section 6: $1.99 a month or $20 a year through Dec 31, 2026, then $3.99 a month or $30 a year from Jan 1, 2027.
+- If you have joined a venue, the Budget page shows one line near the prices: "<Venue> gets a small credit on its TipNet Teams bill when you subscribe." That is a thank-you from us to your venue. It does not change your price, and nothing comes out of your pay or tips.
+- Working for more than one venue? A **Credit goes to** choice appears, set to the venue you are working at in the app. Pick the one you want credited before you tap a price.
+- Your venue's credit is 25% of what you pay, and it counts only while you keep your subscription. Your manager sees a count of subscribers, never names.
+- **Budget is never required.** Your manager cannot ask you to buy it for the job, and it can never be taken out of your wages or tips. You can cancel any time (the link is in your receipt email), and tips and pay estimates stay free.
+
+## A key for your manager
+If you run a venue, keys for TipNet Teams are entered in **Setup** at the bottom (the "Teams" card > "I have a team key"). A key pasted in the Budget box works too: the app can tell which product a key is for. Details and prices are on the manager page.

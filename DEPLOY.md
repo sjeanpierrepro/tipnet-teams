@@ -1,45 +1,42 @@
-# Publishing TipNet
+# Publishing TipNet Teams
+
+TipNet Teams is a static website: the folder `app/` is the whole product. It is published on GitHub Pages from its own GitHub repository, and it is served at `https://teams.tipmynet.com` (DNS at Cloudflare). Until that record exists, the free `https://USERNAME.github.io/tipnet-teams/` link works (all links inside the app are relative, so nothing changes when you add the domain).
 
 ## Publishing an update
 
-The app is already live on GitHub Pages. To push a new version to your staff:
-
-1. **GitHub Desktop:** Review your changes in the list.
+1. **GitHub Desktop:** review your changes in the list.
 2. **Commit to main** with a short message (like "Fix budget calculations").
 3. **Push origin** (top bar).
-4. Open GitHub in your browser and go to your repository **Actions** tab. A green check appears in 1 to 2 minutes.
-5. Tell staff to open TipNet. They will see "Update available: Refresh" and tap it. Where it sits depends on the version they are updating from: phones still on v37 show it at the **top** of the page (that is v37's own code); from v38 on it is at the **bottom**, just above the "TipNet Budget" card.
-   - **For the v37 to v38 update:** tell staff to close any other TipNet windows or tabs first, then tap Refresh. If the browser asks "Leave site?", choose **Leave** (that is v37 protecting unsaved Setup changes; Leave finishes the update).
+4. Open GitHub in your browser, go to your repository **Actions** tab. A green check appears in 1 to 2 minutes.
+5. Tell staff to open TipNet Teams. They see "Update available: Refresh" at the bottom of the page and tap it.
 
-**Important:** Before you push, bump `VERSION` in `app/sw.js`. Change the number at the end (for example, if it says `tipnet-v16`, change it to `tipnet-v17`; always one higher than what is there now). Without this, phones keep their old cached version.
+**Important:** before you push, bump `VERSION` in `app/sw.js`. Change the number at the end (for example `tipnetteams-v1` to `tipnetteams-v2`; always one higher than what is there now). Without this, phones keep their old cached version. The one exception is `app/js/billing-config.js` on its own: installed apps refresh it in the background.
 
 ---
 
-## First-time setup (already done)
+## First-time setup: a new GitHub repository plus GitHub Pages
 
-If you need to set up a fresh GitHub repository (you should not need this):
+TipNet Teams has its own repository. Do not reuse the repository of any other app.
 
 ### Step 1: Create a GitHub account (skip if you have one)
 1. Go to https://github.com and click **Sign up**.
-2. Pick a username. It becomes part of your link (`https://USERNAME.github.io/tipnet/`).
+2. Pick a username. It becomes part of your free link (`https://USERNAME.github.io/REPO/`).
 3. Confirm your email.
 
-### Step 2: Publish the folder
+### Step 2: Create the repository and publish the folder
 
 **Easiest: GitHub Desktop** (https://desktop.github.com)
-1. Install GitHub Desktop and sign in with your GitHub account.
-2. **File > Add local repository...**
-3. Choose the tipnet folder on your computer and click **Add repository**. (It is already a git repository, so you do not need to create one.)
-4. Click **Publish repository** (top bar).
-5. Keep the name `tipnet`. **Uncheck "Keep this code private"** (GitHub Pages is free only for public repositories).
-6. Click **Publish repository**.
+1. Install GitHub Desktop and sign in.
+2. **File > Add local repository...** and choose the TipNet Teams folder. (It is already a git repository, so you do not need to create one.)
+3. Click **Publish repository** (top bar).
+4. Pick a repository name (for example `tipnet-teams`). **Uncheck "Keep this code private"** (GitHub Pages is free only for public repositories).
+5. Click **Publish repository**.
 
 **Alternative: upload in the browser**
 1. On github.com click **+** (top right) > **New repository**.
-2. Name it `tipnet`, choose **Public**, leave "Add a README" unchecked, click **Create repository**.
+2. Name it, choose **Public**, leave "Add a README" unchecked, click **Create repository**.
 3. Click **uploading an existing file**.
-4. Open the `tipnet` folder in File Explorer, select **every** file and folder (`app`, `tests`, `.github`, `package.json`, the `.md` files, and so on) and drag them onto the page.
-   - Make sure the `.github` folder is included; without it nothing deploys. Do **not** drag the `.git` folder (it only appears if hidden items are shown).
+4. Open the project folder in File Explorer, select **every** file and folder (`app`, `tests`, `.github`, `package.json`, the `.md` files, and so on) and drag them onto the page. Make sure `.github` is included; without it nothing deploys. Do **not** drag the `.git` folder.
 5. Click **Commit changes**.
 
 ### Step 3: Turn on GitHub Pages
@@ -50,11 +47,29 @@ If you need to set up a fresh GitHub repository (you should not need this):
 ### Step 4: Run the deploy
 1. Click the **Actions** tab.
 2. The first run (from Step 2) may show a red X. That is expected: Pages was not turned on yet.
-3. Click **Deploy to GitHub Pages** in the left list.
-4. Click **Run workflow** (right side) > **Run workflow**.
-5. Wait for the green check (about 1 to 2 minutes).
+3. Click **Deploy to GitHub Pages** in the left list, then **Run workflow** (right side) > **Run workflow**.
+4. Wait for the green check (about 1 to 2 minutes).
 
-Your app is live at **https://USERNAME.github.io/tipnet/** (replace USERNAME with your GitHub username). Share this link with staff, or your custom domain once it is set up (TipNet's is https://tipmynet.com).
+Your app is live at `https://USERNAME.github.io/tipnet-teams/`. The manager page is at `/teams/` on the same address. Share `https://teams.tipmynet.com` once it is set up (next section).
+
+---
+
+## The address: teams.tipmynet.com
+
+TipNet Teams lives at **https://teams.tipmynet.com**, a subdomain of the owner's existing domain, published from its **own** GitHub repository and Pages site (`tipnet-teams`). It has its own web address, so its own storage and service worker. It is deliberately not `tipmynet.com/teams`: that would share the consumer app's service worker scope and its saved data. Nothing in the app depends on the address (all links are relative), and the contact email stays hello@tipmynet.com.
+
+1. **Publish the repository** (First-time setup above): GitHub Desktop > **Publish repository**, name `tipnet-teams`, public.
+2. **Pages source.** Repository **Settings > Pages > Build and deployment > Source: GitHub Actions**.
+3. **Custom domain.** Same page, **Custom domain**: type `teams.tipmynet.com`, **Save**. Wait for the DNS check to pass, then tick **Enforce HTTPS**.
+4. **Cloudflare DNS: one record.** Cloudflare > the tipmynet.com domain > **DNS > Records > Add record**: type `CNAME`, name `teams`, target `sjeanpierrepro.github.io`, proxy status **DNS only** (grey cloud).
+5. **Domain verification.** The account's GitHub Pages verification for tipmynet.com already exists and covers its subdomains. Keep its `TXT` record.
+6. **No CNAME file.** The deploy workflow publishes the `app` folder with GitHub Actions, and the custom domain is stored in the Pages settings, so the repository needs no `CNAME` file. Do not add one.
+7. **Tell Lemon Squeezy.** Set the confirmation-modal and receipt button links to `https://teams.tipmynet.com/` (PAYMENTS.md).
+8. **Email.** The contact email stays `hello@tipmynet.com` (Cloudflare Email Routing on the main domain). Nothing to change.
+
+The manager page is at `https://teams.tipmynet.com/teams/`.
+
+**Saved data belongs to the web address.** If you ever test on the `github.io` link first, anyone who used it keeps their nights there. To move: in that app, Setup > Backups > **Save a backup file**; then open `https://teams.tipmynet.com`, install it, and restore that file before entering anything (restoring replaces what is saved there). Hand out QR posters and links only once the address is final.
 
 ---
 
@@ -72,16 +87,6 @@ Drops without an account are temporary. Create a free account and claim the site
 
 - **HTTPS is required** for offline use and install. Both hosts use HTTPS.
 - **Same link after updates.** Staff do not need a new link when you redeploy.
-- **Custom domain:** TipNet runs at **https://tipmynet.com** (see "Our domain" below).
-
----
-
-## Our domain (tipmynet.com)
-
-- Bought at Cloudflare (Domain Registration, auto-renew on). DNS is at Cloudflare, every record **DNS only** (grey cloud): four `A` records for `tipmynet.com` (185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153), four `AAAA` records (2606:50c0:8000::153 to 2606:50c0:8003::153), `CNAME www` to `sjeanpierrepro.github.io`, and the `TXT` record `_github-pages-challenge-sjeanpierrepro` that keeps the domain verified (GitHub profile **Settings > Pages**; don't delete it).
-- In the repository, **Settings > Pages > Custom domain** is `tipmynet.com` with **Enforce HTTPS** on. The old link https://sjeanpierrepro.github.io/tipnet/ redirects to it.
-- Email: **hello@tipmynet.com** is forwarded to tipnet.help@gmail.com by Cloudflare **Email Routing** (its MX, SPF and DKIM records are in the same DNS list; leave them).
-- **Saved data belongs to the web address.** A phone that used the old github.io link keeps its nights there: that old app keeps opening (it is stored on the phone) but no longer gets app updates (only the payments switch in `js/billing-config.js` still reaches it, because the service worker refreshes that one file with a fetch that follows the redirect; keep that in mind when payments go live). To move: in the old app, Setup > Backups > **Save a backup file**; then open **https://tipmynet.com**, install it, and restore that file before entering anything (restoring replaces what is saved there). The same applies if the domain ever changes again.
 
 ---
 
@@ -98,10 +103,10 @@ Open the failed run to see which test failed. Fix it locally (`npm test`), then 
 
 **"404 / Page not found" at the link**
 - Check Settings > Pages says "Your site is live at ...". If not, run the workflow again (Step 4).
-- The link is https://tipmynet.com/ (the old github.io link only redirects there). Without a custom domain, a GitHub Pages link ends in `/tipnet/` and must match the repository name exactly.
+- Without a custom domain, the link ends in `/REPO/` and must match the repository name exactly.
 - Wait a minute after a green check; the first publish can lag.
 
 **Staff still see the old version**
 They get an "Update available: Refresh" bar. If you forgot to bump `VERSION` in `app/sw.js`, bump it and push again.
 
-**Need help?** GitHub: https://docs.github.com/pages. Netlify: the **Support** link in the dashboard.
+**Need help?** GitHub: https://docs.github.com/pages. Cloudflare: https://developers.cloudflare.com/dns/. Netlify: the **Support** link in the dashboard.

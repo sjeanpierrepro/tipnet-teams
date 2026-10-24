@@ -187,7 +187,7 @@ function render() {
           if (ask) root.prepend(ask);
         }
       }
-      // "For managers: TipNet Teams" sits just above the Budget card at the bottom of Setup, until Teams is unlocked here.
+      // The "Teams" card sits just above the Budget card at the bottom of Setup, until Teams is unlocked here.
       if (current === 'setup' && !setup.guidedOnScreen()) {
         const managers = managersCard();
         if (managers) root.append(managers);

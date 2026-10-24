@@ -1,8 +1,20 @@
-# TipNet
+# TipNet Teams
 
-TipNet is a free app that helps hospitality employees see their estimated take-home pay at the end of a shift. You enter your credit card tips, your cash tips and the hours you worked (TipNet adds your hourly pay), and it shows how much cash you're taking home and how much will appear on your paycheck after taxes and deductions.
+TipNet Teams is the business edition of TipNet, a free app that helps hospitality employees see their estimated take-home pay at the end of a shift. You enter your credit card tips, your cash tips and the hours you worked (it adds your hourly pay), and it shows how much cash you're taking home and how much will appear on your paycheck after taxes and deductions.
 
-All the numbers stay on your phone or computer. Your bar cannot see them. No accounts to create. Your pay and budget data never leave your device; the only thing TipNet ever sends is a license key check to Polar (the payment provider), and only if you use the paid Budget add-on.
+All the numbers stay on your phone or computer. Your bar cannot see them. No accounts to create. Your pay and budget data never leave your device; the only thing the app ever sends is a license key check to Lemon Squeezy (the payment provider), and only if you use a paid product (TipNet Teams for venues, or TipNet Budget for staff).
+
+> Your tip software shows what staff earned. TipNet Teams shows what they keep.
+
+## TipNet Teams overview
+
+There are three kinds of people and two paid products. It is one static app (no server, no accounts), and the manager page is `app/teams/index.html`.
+
+- **Staff use the app free.** Tips, take-home estimates, pay periods, tip-outs and backups are free, always. A staff member can join a venue by scanning the venue's QR poster; joining shares none of their pay with the venue.
+- **TipNet Budget** (the "Staff Budget") is an optional add-on a staff member buys for themselves: $1.99 a month or $20 a year through Dec 31, 2026 11:59 PM ET, then $3.99 a month or $30 a year from Jan 1, 2027. It adds the Budget tab and up to 5 establishments.
+- **TipNet Teams** is what a venue buys: $59 a month or $500 a year per location, no setup fee. It unlocks the manager tools (venue setup QR, tip-pool calculator, tip sheets). Managers never see staff pay. The venue code and tip sheets hold only what the manager typed, and they are worked out on the device.
+- **Staff Perks Credit.** Every staff member at a venue who keeps a Budget subscription earns that venue a credit worth 25% of what they pay ($0.50 a month at $1.99, $1.00 at $3.99; a yearly subscriber counts as the yearly price / 12 x 25% a month). It comes off the venue's next TipNet Teams bill, down to $0, never as cash. It counts only active subscriptions, counted monthly, and only while the venue's Teams subscription is active. Managers see a count, never names. Staff are told at checkout. Budget can never be required for the job or deducted from wages or tips. How to work it out each month: the runbook in [PAYMENTS.md](PAYMENTS.md).
+- **Payments** are Lemon Squeezy only, set in `app/js/billing-config.js` (prices, checkout links, product ids). A key entered anywhere in the app is activated with Lemon Squeezy, and the product id in its reply decides whether it unlocks Budget or Teams. Each product has its own license state, "Remove from this device", daily recheck and 14-day offline grace. See [PAYMENTS.md](PAYMENTS.md).
 
 ## What you can do with TipNet
 
@@ -25,7 +37,7 @@ All the numbers stay on your phone or computer. Your bar cannot see them. No acc
 ## How to run TipNet
 
 ### On your phone or computer
-Open **https://tipmynet.com** (or the link your bar gives you). The first time, you may see a prompt to "Install app" or "Add to home screen"—tap it. After that, open it from your home screen or desktop like any app. It works offline.
+Open the link your bar or venue gives you (the address where TipNet Teams is published). The first time, you may see a prompt to "Install app" or "Add to home screen"—tap it. After that, open it from your home screen or desktop like any app. It works offline.
 
 ### On your own computer (testing or setup)
 You need Node 20.19 or newer 20.x, 22.13 or newer 22.x, or Node 24 or higher (the "engines" line in package.json). In your terminal, from the TipNet folder, first install test dependencies once:
@@ -99,11 +111,11 @@ TipNet is built for current versions of Safari (iPhone and Mac), Chrome (Android
 
 ## Releasing an update
 
-When you change any file in `app/`, also change the `VERSION` line at the top of `app/sw.js` (for example `tipnet-v2` to `tipnet-v3`). That is how phones learn there is a new version; they then show "Update available: Refresh". The one exception is `app/js/billing-config.js` on its own (switching payments on): installed apps refresh it in the background, so the bump is optional there, though still recommended.
+When you change any file in `app/`, also change the `VERSION` line at the top of `app/sw.js` (for example `tipnetteams-v1` to `tipnetteams-v2`). That is how phones learn there is a new version; they then show "Update available: Refresh". The one exception is `app/js/billing-config.js` on its own (switching payments on): installed apps refresh it in the background, so the bump is optional there, though still recommended.
 
 ## Privacy
 
-Your numbers stay on your device. A Content Security Policy in `app/index.html` makes the browser enforce that TipNet only talks to its own site. If you use the optional Budget add-on, TipNet sends only your license key and a random device name to Polar, the payment provider (once when you activate the key, and about once a day to check it is still valid). Your pay data and budget never leave your device.
+Your numbers stay on your device. A Content Security Policy in `app/index.html` makes the browser enforce that TipNet only talks to its own site. If you use the optional Budget add-on, the app sends only your license key and a random device name to Lemon Squeezy, the payment provider (once when you activate the key, and about once a day to check it is still valid). Your pay data and budget never leave your device.
 
 ## Legal
 
@@ -112,8 +124,13 @@ Changing the contact email: edit `CONTACT_EMAIL` in `app/js/legal.js` (the Priva
 TipNet gives estimates, not tax advice. Your numbers stay on your device. It does not collect your name, Social Security number, or any personal information beyond what you voluntarily type into it.
 
 ## Budget (optional paid add-on)
-The Budget tab helps plan money between paychecks: "safe to spend until payday", next paycheck, bills, spending categories and savings goals. Budget never projects: it uses only the numbers you type and the estimates TipNet makes from the nights you logged (a check is "from 3 nights logged so far", or $0 when none are logged). With more than one establishment it counts all of them: safe to spend runs until the next check from any establishment (and says whose), the after-payday view lists each check that arrives, and each goal is saved from one establishment's paychecks ("Save from which paycheck?"). It costs $1.99 a month or $20 a year; everything else in TipNet stays free. Budget data stays on the device like everything else.
+The Budget tab helps plan money between paychecks: "safe to spend until payday", next paycheck, bills, spending categories and savings goals. Budget never projects: it uses only the numbers you type and the estimates TipNet makes from the nights you logged (a check is "from 3 nights logged so far", or $0 when none are logged). With more than one establishment it counts all of them: safe to spend runs until the next check from any establishment (and says whose), the after-payday view lists each check that arrives, and each goal is saved from one establishment's paychecks ("Save from which paycheck?"). It costs $1.99 a month or $20 a year through Dec 31, 2026, then $3.99 a month or $30 a year from Jan 1, 2027 (the prices live in `app/js/billing-config.js`, which switches what the app shows on that date); everything else stays free. Budget data stays on the device like everything else.
 
 A calm **TipNet Budget** card at the bottom of Tonight, Pay periods and Setup shows the price and opens a preview of Budget ("Coming soon" while payments are off); it disappears once Budget is unlocked on that device. The Budget tab itself is hidden until you switch on payments (in `app/js/billing-config.js`; click-by-click steps are in `PAYMENTS.md`). Once payments are on, customers can buy a license key and paste it into the Budget tab to unlock the feature.
 
 To try it locally, open the app on localhost with `?unlock=dev` on the end of the address.
+
+## TipNet Teams (for managers)
+The manager page is `app/teams/index.html` (open it at `/teams/` on your site). It is static: the pitch, what managers and staff get, Budget and the Staff Perks Credit with a worked example, the price, Buy buttons, "Manage subscription" and the FAQ. Its prices, Buy links and example numbers are read from `app/js/billing-config.js`, so they live in one place; while a product has no checkout link the button says "Coming soon". It is not precached by the service worker (see DECISIONS.md).
+
+In the app, a calm **Teams** card sits near the bottom of Setup while Teams is not unlocked on the device. It links to the manager page and holds the box for a team key (a key pasted in any key box is matched to its product). `app/js/entitlements.js` exports `budgetUnlocked()` and `teamsUnlocked()`, plain yes/no answers read from the license stored on the device (`?unlock=dev` on localhost opens both). An establishment that joined a venue stores `venue = { id, name }`; the Budget checkout link then carries `checkout[custom][venue_id]=<id>` so the venue can be credited.

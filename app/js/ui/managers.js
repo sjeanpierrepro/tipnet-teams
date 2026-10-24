@@ -1,4 +1,4 @@
-// The calm "For managers: TipNet Teams" card at the very bottom of Setup, only while TipNet Teams is not unlocked on this
+// The calm "Teams" card at the very bottom of Setup, only while TipNet Teams is not unlocked on this
 // device. It points to the manager page (teams/index.html) and holds the box for a team key. One card, no popups.
 import { productOn, displayPrices } from '../billing.js';
 import { teamsUnlocked } from '../entitlements.js';
@@ -11,12 +11,8 @@ export function managersCard() {
   return el(
     'section',
     { class: 'card stack', id: 'managers-card', 'aria-labelledby': 'managers-card-h' },
-    el('h2', { id: 'managers-card-h' }, 'For managers: TipNet Teams'),
-    el(
-      'p',
-      null,
-      'Set up your venue once, hand your staff a QR code, split the tip pool and print tip sheets. Your staff keep their pay private.',
-    ),
+    el('h2', { id: 'managers-card-h' }, 'Teams'),
+    el('p', null, 'Tip pools, tip sheets and a venue QR for your bar or restaurant.'),
     el('p', null, el('strong', null, p.monthly + ' a month or ' + p.yearly + ' a year per location')),
     productOn('teams')
       ? null
@@ -32,7 +28,7 @@ export function managersCard() {
       el(
         'a',
         { class: 'btn btn-secondary btn-block', id: 'managers-see', href: 'teams/index.html' },
-        'See TipNet Teams',
+        'See Teams',
       ),
     ),
     // A team key works from anywhere; this box is only shown once Teams can be bought.

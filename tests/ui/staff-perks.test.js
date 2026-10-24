@@ -87,7 +87,11 @@ test('managers card: bottom of Setup while Teams is locked, links to the manager
     page.tab('setup');
     const card = page.$('#managers-card');
     assert.ok(card);
-    assert.match(page.text(card), /For managers: TipNet Teams/);
+    assert.match(page.text(card), /Teams/);
+    assert.equal(page.$('#managers-card-h').textContent, 'Teams');
+    assert.match(page.text(card), /Tip pools, tip sheets and a venue QR for your bar or restaurant\./);
+    assert.doesNotMatch(page.text(card), /managers/i);
+    assert.equal(page.$('#managers-see').textContent, 'See Teams');
     assert.match(page.text(card), /\$59 a month or \$500 a year per location/);
     assert.equal(page.$('#managers-see').getAttribute('href'), 'teams/index.html');
     assert.ok(page.$('#license-key', card), 'a team key can be entered');
