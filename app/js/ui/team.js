@@ -954,9 +954,13 @@ function poolSection(S) {
       total.textContent = 'Shares add up to ' + sum / 100 + '%. They need to add up to 100%.';
     };
     sharesHost.append(el('p', { class: 'label' }, 'Share of the pool for each role'));
+    const usedIds = new Set(); // two roles that differ only in punctuation must not share an id (labels point at ids)
     roles.forEach((label, k) => {
+      let id = 'pool-share-' + k.replace(/[^a-z0-9]/g, '_');
+      for (let n = 2; usedIds.has(id); n++) id = 'pool-share-' + k.replace(/[^a-z0-9]/g, '_') + '-' + n;
+      usedIds.add(id);
       const box = moneyInput({
-        id: 'pool-share-' + k.replace(/[^a-z0-9]/g, '_'),
+        id,
         value: P.shares[k] || '',
         placeholder: 'e.g. 60',
       });
