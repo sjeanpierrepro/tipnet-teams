@@ -2747,14 +2747,15 @@ export function subscriptionCard(product = 'budget') {
   const slot = SLOTS[product];
   const teams = product === 'teams';
   const d = displayEntitlement(e);
-  const price = displayPrices(product);
+  // No amount: what this person pays is the price they subscribed at (an existing $1.99 subscriber keeps it after the
+  // Jan 1, 2027 price change), which this device does not know. The receipt and Manage subscription show it.
   const plan =
     d.plan === 'dev'
       ? 'Developer unlock (this computer only)'
       : d.plan === 'yearly'
-        ? 'Yearly, ' + price.yearly + ' a year'
+        ? 'Yearly'
         : d.plan === 'monthly'
-          ? 'Monthly, ' + price.monthly + ' a month'
+          ? 'Monthly'
           : teams
             ? 'TipNet Teams subscription'
             : 'Budget subscription';

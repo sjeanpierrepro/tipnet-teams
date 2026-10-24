@@ -112,3 +112,44 @@ test('budget: "Remove from this device" while offline keeps the key, says so, an
     await page.close();
   }
 });
+
+test('budget: after the Jan 1, 2027 price change the Subscription card shows the plan with no amount', async () => {
+  const { BILLING } = await import('../../app/js/billing.js');
+  const was = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new TypeError('Failed to fetch'); // a recheck must never reach the real service
+  };
+  for (const plan of ['monthly', 'yearly']) {
+    const page = await boot({
+      url: 'http://localhost/',
+      payments: true,
+      seed: realState((S) => {
+        S.workplaces[0].setupDone = true;
+        S.settings.entitlement = {
+          status: 'active',
+          instanceId: 'inst-1',
+          validatedAt: new Date().toISOString(),
+          plan,
+          key: 'ABCD-1234-EFGH-5678',
+        };
+      }),
+    });
+    try {
+      // the price change has happened (the harness clears it at the next boot)
+      BILLING.products.budget.after = {
+        at: '2020-01-01T00:00:00Z',
+        prices: { monthly: '$3.99', yearly: '$30' },
+      };
+      page.tab('budget');
+      const card = page.$$('section.card').find((s) => /^Subscription/.test(page.text(s)));
+      assert.ok(card, 'the Subscription card');
+      const t = page.text(card);
+      assert.match(t, plan === 'monthly' ? /Plan\s*Monthly\s*Status/ : /Plan\s*Yearly\s*Status/);
+      assert.doesNotMatch(t, /\$/, 'no price: an existing subscriber may still pay $1.99 / $20');
+    } finally {
+      await page.settle();
+      await page.close();
+    }
+  }
+  globalThis.fetch = was;
+});
