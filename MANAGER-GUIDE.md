@@ -43,6 +43,8 @@ Tap **Print the tip sheet** to put it on paper.
 
 ## 4. Share a sheet
 
+Tell your staff to open only venue and tip sheet links that come from you.
+
 Under the tip sheet, tap **Share as a link or QR**. TipNet shows **"Anyone with this link or QR sees everyone's share."** before the link, because the sheet has every name and amount in it. Only share it with your team.
 
 Staff open the link, pick their name, and TipNet opens **Tonight** for that date with their credit card tips, cash tips and hours already filled in and tip-outs unticked (the pool was already split). They look it over and tap **Save night**. Nothing is saved for them until they do.
