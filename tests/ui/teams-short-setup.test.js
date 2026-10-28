@@ -41,6 +41,7 @@ test('one short step: the summary, your rate for each job, and what comes from y
     assert.match(page.text(), /One short step/);
     assert.doesNotMatch(page.text(), /Three short steps/);
     assert.equal(page.$$('.steps li').length, 1);
+    assert.equal(page.$('#join-link'), null, 'already joining: no "Joining a venue?" link');
     // your rate for each job, filled in with the venue's, with the paystub hint
     assert.equal(page.$('#pr-p1').value, '12');
     assert.equal(page.$('#pr-p2').value, '15');

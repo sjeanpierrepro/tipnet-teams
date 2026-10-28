@@ -2854,7 +2854,7 @@ function guided(root, ctx) {
       : null;
   // TipNet Teams: a venue link or code someone was given opens the same Join screen as the link does.
   const joinLink =
-    !pre && guidedStep === 0 && first && !many && !joinPaste
+    !pre && !short && guidedStep === 0 && first && !many && !joinPaste // already joining: no second way in
       ? el(
           'div',
           null,
@@ -2916,7 +2916,8 @@ function guided(root, ctx) {
           'p',
           { class: 'hint' },
           short
-            ? 'One short step. You can change any of it later.'
+            ? (names.length === 2 ? 'Two short steps' : 'One short step') +
+                '. You can change any of it later.'
             : (names.length === 4 ? 'Four' : 'Three') + ' short steps. You can change any of it later.',
         ),
       ),
