@@ -257,3 +257,30 @@ test('with no venue (a normal first run) the three guided steps are unchanged', 
     await page.close();
   }
 });
+
+test('with an install prompt: Two short steps before and after Finish, and the after step shows the same two', async () => {
+  const { setInstallPrompt } = await import('../../app/js/ui/common.js');
+  const page = await boot({ url: joinUrl(withIds()) });
+  try {
+    setInstallPrompt({ prompt: () => {}, userChoice: Promise.resolve({ outcome: 'dismissed' }) });
+    page.click(page.$('#join-start'));
+    await page.settle();
+    assert.match(page.text(), /Two short steps/);
+    assert.equal(page.$$('.steps li').length, 2);
+    page.type(page.$(GROSS, page.app), '900');
+    page.type(page.$(SHIFTS, page.app), '10');
+    page.click(page.$('#no-ded'));
+    page.click(page.button('Finish setup'));
+    await page.settle();
+    assert.equal(page.state().workplaces[0].setupDone, true);
+    assert.ok(page.$('#install-now'), 'the home-screen step after saving');
+    assert.match(page.text(), /Two short steps/);
+    assert.deepEqual(
+      page.$$('.steps li').map((li) => li.textContent),
+      ['1. Your rates and paystub', '2. Install app'],
+    );
+  } finally {
+    setInstallPrompt(null);
+    await page.close();
+  }
+});

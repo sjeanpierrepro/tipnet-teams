@@ -2438,7 +2438,10 @@ function installWords(kind) {
 function afterSetupStep(root, S) {
   const st = afterSetup;
   const words = installWords(st.kind);
-  const names = ['Pay period and gross', 'Deductions', 'Pay and tip-out', words.tab];
+  const names = st.short
+    ? ['Your rates and paystub', words.tab]
+    : ['Pay period and gross', 'Deductions', 'Pay and tip-out', words.tab];
+  const last = names.length - 1;
   const finish = () => {
     S.settings.installStepSeen = true;
     save();
@@ -2477,12 +2480,22 @@ function afterSetupStep(root, S) {
       { class: 'stack' },
       el('h1', { tabindex: '-1' }, 'Set up TipNet Teams'),
       el('p', { class: 'note' }, 'Your setup is saved.'),
-      explain(el('p', { class: 'hint' }, 'Four short steps. You can change any of it later.')),
+      explain(
+        el(
+          'p',
+          { class: 'hint' },
+          (st.short ? 'Two' : 'Four') + ' short steps. You can change any of it later.',
+        ),
+      ),
       el(
         'ol',
         { class: 'steps', 'aria-label': 'Setup progress' },
         names.map((n, i) =>
-          el('li', { class: i < 3 ? 'done' : '', 'aria-current': i === 3 ? 'step' : null }, i + 1 + '. ' + n),
+          el(
+            'li',
+            { class: i < last ? 'done' : '', 'aria-current': i === last ? 'step' : null },
+            i + 1 + '. ' + n,
+          ),
         ),
       ),
       el(
@@ -2729,6 +2742,7 @@ function guided(root, ctx) {
     }
     if (noDeductions) w.noDeductions = true;
     noDeductions = false;
+    const wasShort = venueShortFor === w.id; // the short setup after joining: its home-screen step says two steps
     venueShortFor = null;
     w.setupDone = true;
     delete w.guideSkipped;
@@ -2746,7 +2760,7 @@ function guided(root, ctx) {
     };
     if (post) {
       // everything above is saved already; the home-screen step comes after and cannot change it
-      afterSetup = { kind: homeKind, accepted: false, doneToasts };
+      afterSetup = { kind: homeKind, accepted: false, doneToasts, short: wasShort };
       bus.rerender();
       window.scrollTo(0, 0);
       return;
