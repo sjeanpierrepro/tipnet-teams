@@ -51,6 +51,7 @@ import {
 } from '../inputs.js';
 import { lockFinished, isSetUp, isWorkplaceSetUp, findWorkplace, nightsOf } from '../storage.js';
 import { countSavedNight } from './backup.js';
+import { payTypeName } from '../venue.js';
 import {
   el,
   clear,
@@ -218,28 +219,52 @@ export function blankDraft(S, p) {
 }
 /**
  * TipNet Teams: opens Tonight at establishment w with a night from a manager's tip sheet filled in: its date, the person's
- * CC tips and cash tips (cents), and hours (minutes) on the main job when that is paid by the hour. Tip-outs are
- * unticked, because the pool was already split. Nothing is saved: the worker looks it over and taps Save night (the
- * same-date question still applies). note says where it came from, on the form.
+ * CC tips and cash tips (cents), and hours (minutes) on the job they worked: the job made from the sheet's venue job
+ * (vj), else the job with the venue job's name (job), else the main job. The hours go there when it is paid by the hour,
+ * and that job is the night's job row. Tip-outs are unticked, because the pool was already split. Nothing is saved: the
+ * worker looks it over and taps Save night (the same-date question still applies). The note on the form says where it
+ * came from and which job has the hours. Returns the job the hours are on.
  */
-export function openSheetNight(S, w, { date, cc, cash, minutes, note }) {
+export function openSheetNight(S, w, { date, cc, cash, minutes, vj, job, venueName }) {
   const p = w.profile;
   const d = blankDraft(S, p);
   d.date = date;
   d.dateTouched = true;
   d.cc = String(fromCents(cc));
   d.cash = String(fromCents(cash));
-  const main = jobsOf(p)[0];
-  if (main && main.unit === 'hr' && minutes > 0)
-    d.pay[main.id] = Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
+  const jobs = jobsOf(p);
+  const nameKey = (t) => payTypeName(t).trim().toLowerCase();
+  const target =
+    (vj && jobs.find((t) => t.vj === vj)) ||
+    (job && jobs.find((t) => nameKey(t) === job.trim().toLowerCase())) ||
+    jobs[0];
+  if (target && target !== jobs[0]) {
+    // a different job than the main one: it is the night's only job row until the worker changes it
+    d.rows = [target.id];
+    d.pay = target.unit === 'shift' ? { [target.id]: '1' } : {};
+  }
+  const hoursOn = target && target.unit === 'hr' && minutes > 0 ? target : null;
+  if (hoursOn) d.pay[hoursOn.id] = Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
   draftTipouts(d, p).forEach((r) => {
     d.tipouts[r.id] = false;
   });
-  d.sheetNote = note;
+  d.sheetNote =
+    'From the tip sheet for ' +
+    venueName +
+    ', ' +
+    fmtDate(date) +
+    '. ' +
+    (hoursOn
+      ? 'Hours are on ' +
+        payName(hoursOn, p.payTypes.indexOf(hoursOn)) +
+        '; change it below if you worked a different job. '
+      : '') +
+    'Tip-outs are unticked: the pool was already split.';
   drafts.set(w.id, d);
   if (S.workplaces.length > 1) picked = w.id;
   S.settings.activeWorkplaceId = w.id;
   save();
+  return hoursOn;
 }
 /** Keep a draft in step with Setup (a job removed or turned into other pay since): rows hold current jobs only, never twice. */
 export function syncDraft(d, p) {

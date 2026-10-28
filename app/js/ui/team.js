@@ -98,7 +98,37 @@ function venueId() {
 }
 
 /* ---------- the venue form ---------- */
+/**
+ * A new stable id for a venue job ('j') or tip-out ('t'): the next number after the last one handed out on this device
+ * (settings.team.jSeq / tSeq), so an id is never used twice, even after a row is removed. used: ids on the form now.
+ */
+export function newRowId(prefix, used) {
+  const t = team();
+  const key = prefix + 'Seq';
+  const taken = new Set(used);
+  let n = t[key] || 0;
+  do n++;
+  while (taken.has(prefix + n) && n < 999);
+  if (taken.has(prefix + n)) {
+    // all 999 numbers went by: take the smallest one that is free now
+    n = 1;
+    while (taken.has(prefix + n)) n++;
+  }
+  t[key] = Math.min(n, 999);
+  save();
+  return prefix + n;
+}
+const idsOf = (rows) => rows.map((r) => r.id).filter(Boolean);
+/** The row's id, or a new one when a venue made before ids existed is opened (ids are then kept from here on). */
+function idFor(row, prefix, ids) {
+  if (row.id) return row.id;
+  const id = newRowId(prefix, ids);
+  ids.push(id);
+  return id;
+}
 function formFromVenue(v) {
+  const jobIds = idsOf(v.jobs);
+  const tipIds = idsOf(v.tipouts);
   return {
     name: v.name,
     freq: v.freq,
@@ -107,12 +137,14 @@ function formFromVenue(v) {
     endAuto: false,
     payday: addDays(v.end, v.delay),
     jobs: v.jobs.map((j) => ({
+      id: idFor(j, 'j', jobIds),
       k: j.k,
       name: NAMED_JOB_KEYS.includes(j.k) ? j.name : '',
       rate: String(j.rate / 100),
       unit: j.unit,
     })),
     tipouts: v.tipouts.map((t) => ({
+      id: idFor(t, 't', tipIds),
       k: t.k,
       who: t.who,
       mode: t.mode,
@@ -129,7 +161,7 @@ function blankForm(name) {
     end: '',
     endAuto: true,
     payday: '',
-    jobs: [{ k: 'bartender', name: '', rate: '', unit: 'hr' }],
+    jobs: [{ id: newRowId('j', []), k: 'bartender', name: '', rate: '', unit: 'hr' }],
     tipouts: [],
   };
 }
@@ -183,7 +215,7 @@ export function readForm(F, id) {
     else if (!(n > 0)) problems.push('Enter a rate for ' + label + '.');
     else if (toCents(n) > MAX_RATE_CENTS) problems.push('Rate for ' + label + ' can’t be more than $10,000.');
     else rate = toCents(n);
-    return { k: j.k, name: j.name, rate, unit: j.unit };
+    return { id: j.id, k: j.k, name: j.name, rate, unit: j.unit };
   });
   const tipouts = F.tipouts.map((t) => {
     const who = t.who.trim() || presetName(TIPOUT_PRESETS, t.k);
@@ -197,7 +229,7 @@ export function readForm(F, id) {
     else if (flat && toCents(n) > MAX_FLAT_CENTS)
       problems.push('A flat tip-out can’t be more than $1,000 a night.');
     else value = Math.round(n * 100);
-    return { k: t.k, who, mode: t.mode, value, from: t.from };
+    return { id: t.id, k: t.k, who, mode: t.mode, value, from: t.from };
   });
   if (problems.length) return { problems };
   const venue = checkVenue({ id, name, freq: F.freq, start: F.start, end, delay, jobs, tipouts });
@@ -522,7 +554,13 @@ function venueSection() {
       return toast('A venue code holds up to ' + MAX_VENUE_JOBS + ' jobs.');
     const used = F.jobs.map((j) => j.k);
     const pr = JOB_PRESETS.find((x) => !used.includes(x.k)) || JOB_PRESETS[0];
-    F.jobs.push({ k: pr.k, name: '', rate: '', unit: pr.unit === 'shift' ? 'shift' : 'hr' });
+    F.jobs.push({
+      id: newRowId('j', idsOf(F.jobs)),
+      k: pr.k,
+      name: '',
+      rate: '',
+      unit: pr.unit === 'shift' ? 'shift' : 'hr',
+    });
     drawJobs(true);
     touch();
   });
@@ -634,7 +672,14 @@ function venueSection() {
     const pr =
       TIPOUT_PRESETS.find((x) => x.k !== 'other' && !used.includes(x.k)) ||
       TIPOUT_PRESETS[TIPOUT_PRESETS.length - 1];
-    F.tipouts.push({ k: pr.k, who: pr.name, mode: 'pctTips', value: '', from: 'cash' });
+    F.tipouts.push({
+      id: newRowId('t', idsOf(F.tipouts)),
+      k: pr.k,
+      who: pr.name,
+      mode: 'pctTips',
+      value: '',
+      from: 'cash',
+    });
     drawTips(true);
     touch();
   });
@@ -688,8 +733,18 @@ function venueSection() {
 function poolSection(S) {
   const t = team();
   const staff = cleanStaff(t.staff);
+  /** The venue's jobs (with their stable ids), as last made in the Venue code tab. */
+  const venueJobs = () => ((t.venue && t.venue.jobs) || []).filter((j) => j.id);
+  const jobKey = (s) => s.trim().toLowerCase();
   if (!P.rows) {
-    P.rows = staff.map((s) => ({ name: s.name, role: s.role, points: String(s.points / 100), hours: '' }));
+    // A person whose role is a venue job follows that job by its id: rename the job in the Venue code tab and their
+    // role shows the new name (the tip sheet carries the id, so a worker's phone can find their own job).
+    P.rows = staff.map((s) => {
+      const job = s.vj ? venueJobs().find((j) => j.id === s.vj) : null;
+      const row = { name: s.name, role: job ? job.name : s.role, points: String(s.points / 100), hours: '' };
+      if (job) row.vj = job.id;
+      return row;
+    });
     if (!P.rows.length) P.rows.push({ name: '', role: '', points: '1', hours: '' });
   }
   const venueRoles = (t.venue ? t.venue.jobs.map((j) => j.name) : []).concat(
@@ -707,6 +762,7 @@ function poolSection(S) {
         name: r.name.trim(),
         role: r.role.trim(),
         points: pointsOf(r).hundredths,
+        vj: r.vj,
       }))
       .filter((r) => r.name);
     // a name or role TipNet can't use is named on screen (read); the saved list waits until it is fixed, so nothing
@@ -721,6 +777,8 @@ function poolSection(S) {
   }, 500);
 
   const roleKey = (r) => r.trim().toLowerCase();
+  /** The venue job a typed role is (same name, any case), or undefined: its id travels on the tip sheet. */
+  const jobOfRole = (role) => venueJobs().find((j) => jobKey(j.name) === jobKey(role));
   /** Blank points mean the default, 1 (the box is filled back with 1 when it is left). */
   const pointsOf = (r) =>
     String(r.points).trim() === '' ? { hundredths: 100 } : hundredthsFromText(r.points, 1000);
@@ -766,11 +824,14 @@ function poolSection(S) {
       if (m.error) errors.push('Hours for ' + who + ': ' + m.error);
       const pts = P.method === 'points' ? pointsOf(r) : { hundredths: 100 };
       if (pts.error) errors.push('Points for ' + who + ': ' + pts.error);
+      const job = jobOfRole(r.role);
       rows.push({
         name: r.name.trim(),
         role: r.role.trim(),
         minutes: m.minutes || 0,
         points: pts.hundredths || 0,
+        vj: job ? job.id : undefined,
+        job: job ? job.name : undefined,
       });
     });
     const shares = {};
@@ -840,10 +901,19 @@ function poolSection(S) {
     venue: { id: venueId(), name: venueName() },
     date: P.date,
     method: P.method,
-    rows: res.rows.map((r) => ({ name: r.name, minutes: r.minutes, cc: r.cc, cash: r.cash })),
+    rows: res.rows.map((r, i) => {
+      const o = { name: r.name, minutes: r.minutes, cc: r.cc, cash: r.cash };
+      const src = inputRows[i];
+      if (src && src.vj) {
+        o.vj = src.vj; // the venue job picked as this person's role
+        o.job = src.job;
+      }
+      return o;
+    }),
   });
 
   let last = null; // the latest good result
+  let inputRows = []; // the rows it was worked out from (same order)
   const drawShare = () => {
     clear(shareHost);
     if (!P.sharing || !last) return;
@@ -921,6 +991,7 @@ function poolSection(S) {
       return;
     }
     last = res;
+    inputRows = r.input.rows;
     const print = el(
       'button',
       { type: 'button', class: 'btn btn-secondary btn-small', id: 'pool-print' },
@@ -1060,6 +1131,9 @@ function poolSection(S) {
       });
       role.addEventListener('input', () => {
         r.role = role.value;
+        const job = jobOfRole(r.role);
+        if (job) r.vj = job.id;
+        else delete r.vj;
         saveStaff();
         drawShares();
         later();

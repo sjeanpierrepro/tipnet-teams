@@ -86,23 +86,17 @@ test('no setup yet: "Set up with these" starts the guided setup filled in, with 
     const w = page.state().workplaces[0];
     assert.deepEqual(w.venue, { id: VID, name: 'The Corner Bar' });
     assert.equal(w.name, 'The Corner Bar');
-    // step 1: the schedule is filled in; gross pay and shifts are not
-    const dates = page.$$('input[type=date]', page.app);
-    assert.equal(dates[0].value, v.start);
-    assert.equal(dates[1].value, v.end);
-    assert.equal(dates[2].value, addDays(v.end, 5));
+    // one short step: the schedule, jobs and tip-outs are the venue's (see teams-short-setup.test.js); gross pay,
+    // shifts and deductions are the worker's own
+    assert.equal(page.$$('input[type=date]', page.app).length, 0, 'no pay period dates to fill in');
     assert.equal(page.$('input[placeholder="e.g. 2,000"]', page.app).value, '');
+    assert.equal(page.$('#pr-p1').value, '12');
+    assert.equal(page.$('#pr-p2').value, '15');
+    assert.match(page.text(page.$('#venue-summary')), /Barback/);
+    assert.match(page.text(page.$('#venue-summary')), /Host/);
     page.type(page.$('input[placeholder="e.g. 2,000"]', page.app), '900');
     page.type(page.$('input[placeholder="e.g. 10"]', page.app), '10');
-    page.click(page.button('Next'));
-    // step 2: deductions are the worker's own
     page.type(page.$$('input[id^="da-"]', page.app)[0], '60');
-    page.click(page.button('Next'));
-    // step 3: the venue's jobs and tip-outs are filled in
-    assert.equal(page.$('#pr-p1').value, '12');
-    assert.ok(page.$('#pr-p2'), 'the second job');
-    assert.match(page.text(page.$('#app')), /Barback/);
-    assert.match(page.text(page.$('#app')), /Host/);
     page.click(page.button('Finish setup'));
     await page.settle();
     const S = page.state();
@@ -142,7 +136,7 @@ test('no setup yet: the filled-in guided setup survives a reload (the venue stay
     const again = await boot({ seed: clone(page.state()) });
     try {
       assert.equal(tabNow(again), 'setup');
-      assert.equal(again.$$('input[type=date]', again.app)[0].value, venue().start);
+      assert.ok(again.$('#venue-summary'), 'the short step comes back');
       assert.equal(again.state().workplaces[0].venue.id, VID);
     } finally {
       await again.close();
@@ -270,25 +264,24 @@ const sameVenueState = () =>
     S.nights = [night(1, 22, { p1: 8 }), night(2, 20, { p1: 6, p2: 2 }), night(3, 0, { p1: 5 })];
   });
 
-test('the same venue id: offers an update (two taps), changes only jobs and tip-outs, never a finished pay period', async () => {
+test('the same venue id: shows what would change, then one button applies it; finished pay periods stay as they were', async () => {
   const page = await boot({ seed: sameVenueState(), url: joinUrl() });
   try {
     assert.equal(page.$('#join-add'), null, 'no second copy of the same venue');
     const btn = page.must(page.$('#join-update'), 'update button');
-    assert.equal(btn.textContent, 'Update jobs and tip-outs from The Corner Bar');
+    assert.equal(btn.textContent, 'Apply these changes');
     assert.match(
       page.text(page.$('#join-screen')),
       /pay periods that have ended keep the pay they were saved with/,
     );
+    assert.match(page.text(page.$('#join-screen')), /Nothing changes until you tap Apply these changes/);
     const before = clone(page.state());
     const lockedBefore = clone(before.nights[1]);
     assert.ok(lockedBefore.snap, 'the finished pay period is locked');
-    page.click(btn);
-    assert.match(btn.textContent, /Tap again to update Corner/);
     assert.deepEqual(
       page.state().workplaces[0].profile.payTypes,
       before.workplaces[0].profile.payTypes,
-      'one tap changes nothing',
+      'showing the preview changes nothing',
     );
     page.click(btn);
     await page.settle();
@@ -299,12 +292,12 @@ test('the same venue id: offers an update (two taps), changes only jobs and tip-
     assert.deepEqual(
       w.profile.payTypes.map((t) => [t.id, t.k, t.rate, t.retired || 0]),
       [
-        ['p1', 'bartender', 12, 0],
-        ['p2', 'training', 9, 1],
+        ['p1', 'bartender', 9, 0],
+        ['p2', 'training', 9, 0],
         ['p4', 'otherjob', 15, 0],
         ['p3', 'bonus', 0, 0],
       ],
-      'Bartender keeps its id and gets the venue rate, Bonus stays, Training is retired (a night used it), Door is new',
+      'Bartender keeps its id AND the worker’s own rate, their Training job stays, Door is new, Bonus stays',
     );
     assert.deepEqual(
       w.profile.tipouts.map((r) => [r.id, r.k, r.value, r.mode]),
@@ -312,7 +305,7 @@ test('the same venue id: offers an update (two taps), changes only jobs and tip-
         ['t1', 'barback', 15, 'pctTips'],
         ['t2', 'host', 20, 'flat'],
       ],
-      'the barback keeps its id, the rate follows the venue',
+      'the barback keeps its id, the amount follows the venue',
     );
     // what is not the venue's stays
     assert.equal(w.profile.gross, 1500);

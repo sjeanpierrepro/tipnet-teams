@@ -3,7 +3,7 @@
 // changed or saved until the person taps a button.
 import { addDays } from '../math.js';
 import { businessDate, cutoffFromSettings, dateProblem } from '../inputs.js';
-import { decodeVenue, venueLink, BAD_LINK_MSG } from '../venue.js';
+import { decodeVenue, venueLink, BAD_LINK_MSG, FREQ_TEXT, payTypeName } from '../venue.js';
 import { decodeSheet, sheetLink, BAD_SHEET_MSG, METHOD_TEXT } from '../sheet.js';
 import { isIosSafariTab, installStepKind } from './install.js';
 import { hoursLabel } from '../pool.js';
@@ -16,23 +16,256 @@ import {
   FIRST_WORKPLACE_NAME,
 } from '../storage.js';
 import { isUnlocked } from '../billing.js';
-import { el, clear, toast, arm, bus, getState, money, fmtDate } from './common.js';
-import { startVenueSetup, addVenueEstablishment, updateFromVenue, limitLine, joinBlocked } from './setup.js';
+import { el, clear, field, select, moneyInput, toast, bus, getState, money, fmtDate } from './common.js';
+import { readMoney, moneyTypo } from '../inputs.js';
+import {
+  startVenueSetup,
+  addVenueEstablishment,
+  updateFromVenue,
+  venueUpdatePlan,
+  venueJobChoices,
+  limitLine,
+  joinBlocked,
+} from './setup.js';
 import { openSheetNight, tipoutHow } from './tonight.js';
 
 /** What was opened and is waiting for an answer: {kind: 'join', venue} | {kind: 'sheet', sheet} | {kind: 'bad', message}. */
 let pending = null;
+/* ---------- "Update from <venue>": a preview the worker confirms ---------- */
+/** The worker's picks in the update preview (see venue.js planVenueUpdate); cleared whenever another link is opened. */
+let rev = { match: [], useVenue: [], newRate: [], remove: [] };
+const resetRev = () => {
+  rev = { match: [], useVenue: [], newRate: [], remove: [] };
+};
+const rateText = (dollars, unit) => money(dollars) + (unit === 'shift' ? '/shift' : '/h');
+const payLabel = (t) => payTypeName(t);
+
+/** A small group of choices as buttons (role radio), one picked. Same look as the tip sheet's name list. */
+function radioGroup(labelText, items, current, onPick, key) {
+  const group = el('div', { class: 'wp-switch', role: 'radiogroup', 'aria-label': labelText });
+  items.forEach(([id, text]) => {
+    const on = id === current;
+    const b = el(
+      'button',
+      { type: 'button', role: 'radio', 'aria-checked': String(on), 'data-focus-key': key + '-' + id },
+      text,
+    );
+    b.addEventListener('click', () => {
+      onPick(id);
+      bus.rerender();
+    });
+    group.append(b);
+  });
+  return group;
+}
+
+/**
+ * What "Update from <venue>" would change at establishment w, in words, with the worker's choices. Nothing changes until
+ * the one "Apply these changes" button. A venue job is matched to the worker's own job (by the venue's id, then by name),
+ * and the worker can fix a wrong match; a matched job keeps the worker's name and rate unless they choose the venue's rate.
+ */
+function updatePanel(S, w, v, isBlocked) {
+  const plan = venueUpdatePlan(w, v, { ...rev });
+  const mine = venueJobChoices(w);
+  const venueName = v.name;
+  const kids = [];
+  kids.push(
+    el(
+      'p',
+      { class: 'note', id: 'join-update-note' },
+      'You already set up ' +
+        w.name +
+        ' from ' +
+        w.venue.name +
+        '. Here is what would change. Nothing changes until you tap Apply these changes. Your pay schedule, paystub numbers and other pay stay, and pay periods that have ended keep the pay they were saved with.',
+    ),
+  );
+  // the venue's jobs
+  const rateBoxes = [];
+  plan.jobs.forEach((j, i) => {
+    const m = j.mine;
+    const pick = select([...mine.map((t) => [t.id, payLabel(t)]), ['new', 'New job']], j.matchId || 'new', {
+      id: 'upd-match-' + i,
+    });
+    pick.addEventListener('change', () => {
+      const val = pick.value;
+      // a job of mine can be the match for one venue job only: the other one becomes a new job
+      plan.jobs.forEach((o) => {
+        if (o.index !== i && val !== 'new' && o.matchId === val) rev.match[o.index] = 'new';
+      });
+      rev.match[i] = val;
+      delete rev.useVenue[i];
+      bus.rerender();
+    });
+    const block = [
+      el('p', { class: 'label' }, j.vjob.name + ' · ' + rateText(j.vjob.rate / 100, j.vjob.unit)),
+      field('Same as my job', pick),
+    ];
+    if (m) {
+      block.push(
+        el(
+          'p',
+          { class: 'note', id: 'upd-keeps-' + i },
+          'Stays “' +
+            payLabel(m) +
+            '” at your rate' +
+            (j.link ? ', linked to ' + venueName + '’s job' : '') +
+            '.',
+        ),
+      );
+      if (j.differs) {
+        block.push(
+          el(
+            'p',
+            { class: 'note', id: 'upd-rates-' + i },
+            venueName +
+              ': ' +
+              rateText(j.vjob.rate / 100, j.vjob.unit) +
+              ' · yours: ' +
+              rateText(Number(m.rate) || 0, m.unit),
+          ),
+          radioGroup(
+            'Rate for ' + payLabel(m),
+            [
+              ['mine', 'Keep mine'],
+              ['venue', 'Use ' + venueName + '’s'],
+            ],
+            j.useVenue ? 'venue' : 'mine',
+            (val) => (rev.useVenue[i] = val === 'venue'),
+            'upd-rate-' + i,
+          ),
+        );
+      }
+    } else {
+      const rt = moneyInput({
+        id: 'upd-new-' + i,
+        value: String(rev.newRate[i] !== undefined ? rev.newRate[i] : j.newRate),
+      });
+      const fr = field(
+        'Your rate for ' + j.vjob.name + (j.vjob.unit === 'shift' ? ' ($ per shift)' : ' ($ per hour)'),
+        rt,
+      );
+      rt.addEventListener('input', () => {
+        rev.newRate[i] = rt.value;
+      });
+      rateBoxes.push({ rt, fr, i, j });
+      block.push(
+        el(
+          'p',
+          { class: 'note', id: 'upd-new-note-' + i },
+          'New job: added to your list. You can change its rate.',
+        ),
+        fr,
+      );
+    }
+    kids.push(el('section', { class: 'card stack', id: 'upd-job-' + i }, block));
+  });
+  // the worker's jobs the venue doesn't list
+  if (plan.kept.length) {
+    const main = mine[0];
+    const rows = plan.kept.map((t) => {
+      const gone = plan.remove.has(t.id);
+      const row = [
+        el(
+          'p',
+          { class: 'note', id: 'upd-kept-' + t.id },
+          'Not in ' + venueName + '’s list: ' + payLabel(t) + ' — ' + (gone ? 'will be removed' : 'kept'),
+        ),
+      ];
+      if (t !== main) {
+        const box = el('input', {
+          type: 'checkbox',
+          id: 'upd-remove-' + t.id,
+          checked: gone,
+        });
+        box.addEventListener('change', () => {
+          rev.remove = box.checked ? [...plan.remove, t.id] : [...plan.remove].filter((x) => x !== t.id);
+          bus.rerender();
+        });
+        row.push(el('label', { class: 'check', for: 'upd-remove-' + t.id }, box, ' Remove ' + payLabel(t)));
+      }
+      return row;
+    });
+    kids.push(
+      el(
+        'section',
+        { class: 'card stack', id: 'upd-kept' },
+        rows,
+        el('p', { class: 'hint' }, 'A job used on a saved night stays on that night, even if you remove it.'),
+      ),
+    );
+  }
+  // tip-outs: the venue's policy
+  const to = plan.tipouts;
+  if (to.added.length + to.changed.length + to.removed.length) {
+    const how = (r) =>
+      tipoutHow({ mode: r.mode, value: r.value }) +
+      (r.from === 'payroll' ? ', through payroll' : ', from cash');
+    kids.push(
+      el(
+        'section',
+        { class: 'card stack', id: 'upd-tipouts' },
+        el('h3', { class: 'label' }, 'Tip-outs'),
+        el(
+          'p',
+          { class: 'note' },
+          'Tip-outs follow ' + venueName + '’s list. Your ticks on saved nights carry over.',
+        ),
+        to.added.map((r) => el('p', { class: 'note' }, 'Added: ' + r.who + ', ' + how(r))),
+        to.changed.map(({ before, after }) => {
+          const same = how(before) === how(after) && before.who === after.who;
+          return el(
+            'p',
+            { class: 'note' },
+            same
+              ? 'Linked: ' + after.who + ' (no change to the amount)'
+              : 'Changed: ' + before.who + ', ' + how(before) + ' → ' + after.who + ', ' + how(after),
+          );
+        }),
+        to.removed.map((r) => el('p', { class: 'note' }, 'Removed: ' + r.who)),
+      ),
+    );
+  }
+  const status = el('p', { class: 'field-error', role: 'alert', hidden: true });
+  if (!plan.changes) {
+    kids.push(el('p', { class: 'note', id: 'join-nothing' }, 'Nothing to update.'));
+    return kids;
+  }
+  const up = el('button', { type: 'button', class: 'btn', id: 'join-update' }, 'Apply these changes');
+  up.addEventListener('click', () => {
+    if (isBlocked()) return;
+    // a new job's rate: the same money checks as Setup's rate boxes
+    const bad = rateBoxes.find(({ rt }) => moneyTypo(rt.value) || !(readMoney(rt.value) > 0));
+    if (bad) {
+      status.textContent = 'Enter a rate for ' + bad.j.vjob.name + ' (or pick which of your jobs it is).';
+      status.hidden = false;
+      return bad.rt.focus();
+    }
+    const newRate = [];
+    rateBoxes.forEach(({ rt, i }) => (newRate[i] = readMoney(rt.value)));
+    updateFromVenue(S, w, v, { ...rev, newRate });
+    pending = null;
+    resetRev();
+    bus.go('setup');
+    toast('Updated ' + w.name + ' from ' + venueName + '.');
+  });
+  kids.push(el('div', { class: 'cluster' }, up), status);
+  return kids;
+}
+
 /** The tip sheet screen's picks: {row: index of the person's name, wp: establishment id}. */
 let sel = { row: null, wp: null };
 export const pendingLink = () => pending;
 export function reset() {
   pending = null;
   sel = { row: null, wp: null };
+  resetRev();
 }
 
 /** A link was opened: kind 'join' or 'sheet', data the code after the "=". Anything that does not read says so and changes nothing. */
 export function openFragment({ kind, data }) {
   sel = { row: null, wp: null };
+  resetRev();
   const bad = { kind: 'bad', message: kind === 'join' ? BAD_LINK_MSG : BAD_SHEET_MSG };
   try {
     if (kind === 'join') {
@@ -49,11 +282,13 @@ export function openFragment({ kind, data }) {
 /** Shown when a link cannot be read or shown at all (kind decides which plain message). */
 export function openBad(kind) {
   sel = { row: null, wp: null };
+  resetRev();
   pending = { kind: 'bad', message: kind === 'sheet' ? BAD_SHEET_MSG : BAD_LINK_MSG };
 }
 /** Something pasted in Setup that already read as a venue (see setup.js joinCard). */
 export function openParsed(p) {
   sel = { row: null, wp: null };
+  resetRev();
   pending = p;
 }
 const close = () => {
@@ -110,14 +345,6 @@ function iphoneCard(makeLink, idp) {
   );
 }
 
-const FREQ_TEXT = {
-  7: 'Every week',
-  14: 'Every two weeks',
-  15: 'Every 15 days',
-  30: 'Every 30 days',
-  semimonthly: 'Twice a month',
-  monthly: 'Once a month',
-};
 const row = (a, b) =>
   el(
     'div',
@@ -181,13 +408,15 @@ function joinScreen(root, v) {
   const same = S.workplaces.find((w) => w.venue && w.venue.id === v.id);
   const blocked = el('p', { class: 'field-error', role: 'alert', hidden: true });
   // A change typed in Setup and not saved yet would be lost when Setup is redrawn: ask for Save or Discard first.
+  const isBlocked = () => {
+    if (!joinBlocked()) return false;
+    blocked.textContent =
+      'You have changes in Setup that aren’t saved. Save or discard them first, then come back.';
+    blocked.hidden = false;
+    return true;
+  };
   const guard = (fn) => () => {
-    if (joinBlocked()) {
-      blocked.textContent =
-        'You have changes in Setup that aren’t saved. Save or discard them first, then come back.';
-      blocked.hidden = false;
-      return;
-    }
+    if (isBlocked()) return;
     fn();
   };
   const notNow = el('button', { type: 'button', class: 'btn-link', id: 'join-not-now' }, 'Not now');
@@ -224,32 +453,7 @@ function joinScreen(root, v) {
       el('div', { class: 'cluster' }, go),
     ];
   } else if (same) {
-    const note = el(
-      'p',
-      { class: 'note' },
-      'You already set up ' +
-        same.name +
-        ' from ' +
-        same.venue.name +
-        '. This replaces its jobs and tip-outs with the ones above. Your pay schedule, paystub numbers and other pay stay, and pay periods that have ended keep the pay they were saved with.',
-    );
-    const up = el('button', { type: 'button', class: 'btn', id: 'join-update' });
-    arm(up, {
-      label: 'Update jobs and tip-outs from ' + v.name,
-      armedLabel: 'Tap again to update ' + same.name,
-      before: () => {
-        if (!joinBlocked()) return true;
-        guard(() => {})();
-        return false;
-      },
-      onConfirm: () => {
-        updateFromVenue(S, same, v);
-        pending = null;
-        bus.go('setup');
-        toast('Updated ' + same.name + ' from ' + v.name + '.');
-      },
-    });
-    body = [note, el('div', { class: 'cluster' }, up)];
+    body = updatePanel(S, same, v, isBlocked);
   } else {
     const room = canAddWorkplace(S, unlocked);
     const add = el(
@@ -376,12 +580,9 @@ function sheetScreen(root, sheet) {
       cc: r.cc,
       cash: r.cash,
       minutes: r.minutes,
-      note:
-        'From the tip sheet for ' +
-        sheet.venue.name +
-        ', ' +
-        fmtDate(sheet.date) +
-        '. Tip-outs are unticked: the pool was already split.',
+      vj: r.vj,
+      job: r.job,
+      venueName: sheet.venue.name,
     });
     pending = null;
     bus.go('tonight');

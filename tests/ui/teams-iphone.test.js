@@ -59,7 +59,7 @@ test('iPhone Safari, nothing set up: the Join screen explains the Home Screen ap
       null,
       'no home-screen step after it',
     );
-    assert.match(page.text(), /Three short steps/);
+    assert.match(page.text(), /One short step/, 'the venue filled in most of it');
   } finally {
     await page.close();
   }

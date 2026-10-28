@@ -74,9 +74,9 @@ test('venue code: a good form makes a link, a QR code, Copy and the poster; the 
     assert.equal(v.name, 'The Corner Bar');
     assert.equal(v.start, start);
     assert.equal(v.delay, 5);
-    assert.deepEqual(v.jobs, [{ k: 'bartender', name: 'Bartender', rate: 1200, unit: 'hr' }]);
+    assert.deepEqual(v.jobs, [{ id: 'j1', k: 'bartender', name: 'Bartender', rate: 1200, unit: 'hr' }]);
     assert.deepEqual(v.tipouts, [
-      { k: 'barback', who: 'Barback', mode: 'pctTips', value: 1500, from: 'cash' },
+      { id: 't1', k: 'barback', who: 'Barback', mode: 'pctTips', value: 1500, from: 'cash' },
     ]);
     assert.match(v.id, VENUE_ID_RE);
     assert.equal(v.id.length, 12);

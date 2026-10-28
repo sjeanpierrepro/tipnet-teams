@@ -18,7 +18,7 @@ import {
 } from './math.js';
 import { TIME_RE, UID_RE, cleanDays } from './ics.js';
 import { emptyBudget, migrateBudget } from './budget.js';
-import { cleanVenueRef, cleanTeam } from './venue.js';
+import { cleanVenueRef, cleanTeam, validRowId } from './venue.js';
 
 // 4 = v38 (establishments' tip-out people, pinned nights). migrate() reads every older version; data from a NEWER version
 // is never opened or saved over (see newerSchema and load).
@@ -235,6 +235,7 @@ function safeIdsInPlace(S) {
 }
 function cleanPayTypes(list) {
   const seen = new Set();
+  const venueJobs = new Set(); // TipNet Teams: each venue job id (vj) is kept once
   const out = (Array.isArray(list) ? list : [])
     .filter(isObj)
     .slice(0, MAX_PAY_TYPES)
@@ -252,6 +253,10 @@ function cleanPayTypes(list) {
       if (t.diff) o.diff = true;
       if (t.nontax) o.nontax = 1; // a non-taxable amount (no withholding)
       if (t.retired && i > 0) o.retired = 1; // taken out of Setup, kept for the nights that used it (math.isRetired)
+      if (validRowId(t.vj) && !venueJobs.has(t.vj)) {
+        venueJobs.add(t.vj); // made from this job of the venue's code: lets an update line a renamed job up
+        o.vj = t.vj;
+      }
       return o;
     });
   if (!out.length) out.push({ id: 'p1', name: 'Main rate', rate: 0, unit: 'hr', usual: 7, k: 'hourly' });
@@ -284,6 +289,7 @@ function cleanTipoutSetup(src) {
   const to = isObj(src.tipout) ? src.tipout : {};
   const list = Array.isArray(src.tipouts) ? src.tipouts : legacyTipouts(to);
   const seen = new Set();
+  const venueIds = new Set(); // TipNet Teams: each venue tip-out id (vt) is kept once
   const tipouts = list
     .filter(isObj)
     .slice(0, MAX_TIPOUTS)
@@ -291,7 +297,7 @@ function cleanTipoutSetup(src) {
       const k = TIPOUT_KEYS.includes(x.k) ? x.k : 'other';
       const preset = TIPOUT_PRESETS.find((pr) => pr.k === k);
       const who = typeof x.who === 'string' ? cutText(x.who.trim(), 40) : '';
-      return {
+      const o = {
         id: uniqueId(x.id, seen, 't', i + 1),
         k,
         who: who || preset.name,
@@ -299,6 +305,11 @@ function cleanTipoutSetup(src) {
         value: Math.max(0, numOr0(x.value)),
         from: x.from === 'payroll' || x.from === 'check' ? 'payroll' : 'cash',
       };
+      if (validRowId(x.vt) && !venueIds.has(x.vt)) {
+        venueIds.add(x.vt);
+        o.vt = x.vt;
+      }
+      return o;
     });
   return { tipout: savedTipout(to.on && to.basis !== 'after', tipouts), tipouts };
 }
@@ -459,6 +470,7 @@ function cleanSettings(x, ids) {
     const d = { workplaceId: g.workplaceId === undefined ? ids[0] : g.workplaceId };
     d.step = [0, 1, 2].includes(g.step) ? g.step : 0;
     if (g.noDeductions === true) d.noDeductions = true;
+    if (g.venueShort === true) d.venueShort = true; // TipNet Teams: the one short step after joining a venue
     if (isObj(g.profile)) d.profile = cleanProfile(g.profile, { startFallback: '' });
     out.guidedDraft = d;
   }

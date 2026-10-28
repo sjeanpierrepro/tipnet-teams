@@ -64,6 +64,7 @@ import {
   debounce,
   install,
   fmtShort,
+  fmtDate,
 } from './common.js';
 import { cutoffFromSettings, readMoney, moneyTypo, percentTypo, readShiftCount } from '../inputs.js';
 import {
@@ -82,12 +83,20 @@ import {
   flush,
   cutText,
 } from '../storage.js';
-import { venuePayTypes, venueTipouts, decodeVenue } from '../venue.js';
+import {
+  venuePayTypes,
+  venueTipouts,
+  decodeVenue,
+  planVenueUpdate,
+  applyVenueUpdate,
+  payTypeName,
+  FREQ_TEXT,
+} from '../venue.js';
 import { decodeSheet } from '../sheet.js';
 import { renderBackup, renderInstall, fileSaver } from './backup.js';
 import { installStepKind, installHowTo, promptInstall, isIos, isAndroid } from './install.js';
 import { buildIcs, makeUid, timeLabel, nightsLabel, isMorning, DAY_NAMES } from '../ics.js';
-import { redateDraft, dropDraft } from './tonight.js';
+import { redateDraft, dropDraft, tipoutHow } from './tonight.js';
 
 let guidedStep = 0;
 // The "Put TipNet Teams on your home screen" step AFTER a finished first setup (null = not showing): {kind: 'prompt'|'android',
@@ -103,6 +112,9 @@ let gProfile = null;
 let noDeductions = false; // "My paystub has no deductions" ticked (on the blank copy)
 let adding = null; // "+ Set up another establishment" is open: {name, error}
 let joinPaste = false; // the first guided step shows the "Join your venue" paste box
+// The establishment whose guided setup was started from a venue code: it gets ONE short step (the venue filled in the
+// schedule, payday, jobs and tip-outs) instead of three, until "Change these" opens the normal steps. Null = none.
+let venueShortFor = null;
 /**
  * The full Setup page shows each restaurant as one row. The open one is edited as a draft (a copy), applied by Save:
  * open = {wid, base, draft}, where base and draft are {name, noDeductions, profile} (base: as it was when opened).
@@ -148,6 +160,7 @@ export function reset() {
   noDeductions = false;
   adding = null;
   joinPaste = false;
+  venueShortFor = null;
   restoreRequest.open = false;
   rateCleared.clear();
 }
@@ -161,6 +174,7 @@ function keepGuided(S) {
   const g = { workplaceId: guidedFor, step: guidedStep };
   if (noDeductions) g.noDeductions = true;
   if (gProfile) g.profile = gProfile;
+  if (venueShortFor && venueShortFor === guidedFor) g.venueShort = true;
   S.settings.guidedDraft = g;
   return save();
 }
@@ -173,6 +187,7 @@ function resumeGuided(S) {
   guidedFor = w.id;
   guidedStep = [0, 1, 2].includes(g.step) ? g.step : 0;
   noDeductions = g.noDeductions === true;
+  venueShortFor = g.venueShort === true && w.venue ? w.id : null;
   const gp = g.profile;
   if (
     S.profileExample &&
@@ -448,7 +463,7 @@ function semiLabel(startISO) {
   const to = (y) => (y === 1 ? 'end' : ord(y - 1));
   return 'Twice a month (' + ord(lo) + '–' + to(hi) + ' and ' + ord(hi) + '–' + to(lo) + ')';
 }
-function periodCard(ctx, { title = 'Pay period and gross pay' } = {}) {
+function periodCard(ctx, { title = 'Pay period and gross pay', paystubOnly = false } = {}) {
   const { p, ph } = ctx;
   const exampleEnd =
     ctx.S.profileExample && !ctx.blank && isFirstWorkplace(ctx.S, ctx.w) ? p.periodEnd : null; // the example's end date, until the user changes it
@@ -687,17 +702,22 @@ function periodCard(ctx, { title = 'Pay period and gross pay' } = {}) {
       { class: 'note' },
       'Use one recent paystub. Enter the numbers for that pay period, not year-to-date. Your numbers stay on this device.',
     ),
-    el('div', { class: 'grid-2' }, fStart, fEnd),
-    el('div', { class: 'grid-2' }, fShifts, fFreq),
-    explain(
-      el(
-        'p',
-        { class: 'hint' },
-        'The end date keeps each night on the right paycheck; leave it blank to use how often you get paid. Picking how often you get paid moves the end date to match.',
-      ),
-    ),
-    fDelay,
-    fGross,
+    // after joining a venue the dates and schedule are the venue's (the short guided step): only the paystub's own numbers
+    ...(paystubOnly
+      ? [fGross, fShifts]
+      : [
+          el('div', { class: 'grid-2' }, fStart, fEnd),
+          el('div', { class: 'grid-2' }, fShifts, fFreq),
+          explain(
+            el(
+              'p',
+              { class: 'hint' },
+              'The end date keeps each night on the right paycheck; leave it blank to use how often you get paid. Picking how often you get paid moves the end date to match.',
+            ),
+          ),
+          fDelay,
+          fGross,
+        ]),
   );
   card.validate = () => {
     ctx.showAll = true;
@@ -1989,6 +2009,7 @@ export function startVenueSetup(S, v) {
   S.settings.activeWorkplaceId = w.id;
   guidedFor = w.id;
   guidedStep = 0;
+  venueShortFor = w.id; // one short step: the venue filled in most of it
   noDeductions = false;
   adding = null;
   open = null;
@@ -2013,19 +2034,33 @@ export function addVenueEstablishment(S, v) {
   open = null;
   guidedFor = w.id;
   guidedStep = 0;
+  venueShortFor = w.id;
   gProfile = null;
   noDeductions = false;
   keepGuided(S);
   save();
   return w;
 }
+/** The worker's jobs at establishment w (not retired, not other pay), main job first. */
+const jobsAt = (w) => (w.profile.payTypes || []).filter((t, i) => payKind(t, i) === 'job' && !isRetired(t));
 /**
- * "Update jobs and tip-outs from the venue" on an establishment that has the same venue id. Only the jobs and the tip-outs
- * change (the pay schedule, paystub numbers, deductions and other pay stay). A pay period that has ended is locked first
- * with the Setup it was saved with, and a job taken out that a saved night used stays (retired), exactly as Setup's
- * Save does, so no finished pay period changes.
+ * What "Update from <venue>" would do at establishment w, for the preview (nothing is changed): planVenueUpdate on the
+ * worker's own jobs and tip-outs. choices: see planVenueUpdate (the worker's picks).
  */
-export function updateFromVenue(S, w, v) {
+export function venueUpdatePlan(w, v, choices = {}) {
+  return planVenueUpdate(v, jobsAt(w), tipoutSetup(w.profile).list, choices);
+}
+/** The worker's jobs at w, for the "Same as my job" pick lists: [{id, name, rate, unit}]. */
+export const venueJobChoices = (w) => jobsAt(w);
+/**
+ * "Update from the venue" on an establishment that has the same venue id, after the worker confirmed the preview
+ * (venueUpdatePlan, with the same choices). Only the jobs and the tip-outs change (the pay schedule, paystub numbers,
+ * deductions and other pay stay). A matched job keeps the worker's own name and rate unless they chose the venue's; new
+ * venue jobs are added; the worker's other jobs stay unless they chose to remove them. A pay period that has ended is
+ * locked first with the Setup it was saved with, and a job taken out that a saved night used stays (retired), exactly
+ * as Setup's Save does, so no finished pay period changes.
+ */
+export function updateFromVenue(S, w, v, choices = {}) {
   lockFinished();
   const live = w.profile;
   const peopleBefore = copyOf(tipoutSetup(live).list);
@@ -2033,7 +2068,7 @@ export function updateFromVenue(S, w, v) {
   const isJob = (t, i) => payKind(t, i) === 'job' && !isRetired(t);
   live.payTypes = keepUsedPay(
     payBefore,
-    venuePayTypes(v, payBefore, isJob),
+    applyVenueUpdate(v, payBefore, isJob, choices),
     S.nightsExample ? [] : nightsOf(S, w.id),
   );
   const to = venueTipouts(v, peopleBefore);
@@ -2467,13 +2502,113 @@ function afterSetupStep(root, S) {
   if (h) h.focus();
 }
 
+/* ============ guided flow, short version (after joining a venue) ============ */
+/**
+ * The summary of what the venue filled in: "<Venue> filled in your pay schedule, payday, jobs and tip-outs." with a
+ * short list, and "Change these", which opens the normal steps with the same values in.
+ */
+function venueSummaryCard(ctx, onChange) {
+  const { p, w } = ctx;
+  const jobs = (p.payTypes || []).filter((t, i) => payKind(t, i) === 'job' && !isRetired(t));
+  const people = tipoutSetup(p).list;
+  const payday =
+    p.periodStart && p.payDelay != null ? fmtDate(addDays(periodRange(p, 0).end, num(p.payDelay))) : '';
+  const line = (label, text) =>
+    el(
+      'div',
+      { class: 'spread', style: 'align-items:flex-start' },
+      el('strong', null, label),
+      el('span', { style: 'text-align:right' }, text),
+    );
+  const change = el(
+    'button',
+    { type: 'button', class: 'btn btn-secondary btn-small', id: 'venue-change' },
+    'Change these',
+  );
+  change.addEventListener('click', onChange);
+  const card = el(
+    'section',
+    { class: 'card stack', id: 'venue-summary' },
+    el('h2', null, 'From ' + w.venue.name),
+    el('p', { class: 'note' }, w.venue.name + ' filled in your pay schedule, payday, jobs and tip-outs.'),
+    el(
+      'div',
+      { class: 'stack-sm' },
+      line('You get paid', FREQ_TEXT[p.freq] || 'Every ' + num(p.freq) + ' days'),
+      payday ? line('Payday', payday) : null,
+      line('Jobs', jobs.map((t) => payTypeName(t)).join(', ') || 'None'),
+      line(
+        'You tip out',
+        people.length ? people.map((r) => r.who + ' (' + tipoutHow(r) + ')').join(', ') : 'Nobody',
+      ),
+    ),
+    el('div', { class: 'cluster' }, change),
+  );
+  card.validate = () => true;
+  card.firstInvalid = () => null;
+  return card;
+}
+/**
+ * "Your rate for each job": one rate box per job the venue gave, filled with the venue's rate. Rates differ per person
+ * and the worker's paystub is the truth, so it says to check them. The same money parsing and typo checks as the normal
+ * rate boxes (moneyOf, moneyTypo); a job needs a rate (Finish would otherwise drop it).
+ */
+function rateCheckCard(ctx) {
+  const { p } = ctx;
+  const jobs = (p.payTypes || []).filter((t, i) => payKind(t, i) === 'job' && !isRetired(t));
+  const fields = [];
+  const rows = jobs.map((t) => {
+    const rt = moneyInput({ value: t.rate ? String(t.rate) : '', placeholder: '0.00', id: 'pr-' + t.id });
+    const fr = field(
+      'Your rate for ' + payTypeName(t) + (t.unit === 'shift' ? ' ($ per shift)' : ' ($ per hour)'),
+      rt,
+    );
+    guard(rt, fr);
+    rt.addEventListener('input', () => {
+      if (moneyTypo(rt.value)) return ctx.touch(false); // not applied; the last good rate stays
+      t.rate = moneyOf(rt.value);
+      fr.setError(t.rate <= 0 ? 'Enter the rate from your stub.' : '');
+      ctx.touch(false);
+    });
+    if (!(num(t.rate) > 0)) fr.setError('Enter the rate from your stub.');
+    fields.push({ fr, rt, t });
+    return fr;
+  });
+  const card = el(
+    'section',
+    { class: 'card stack', id: 'venue-rates' },
+    el('h2', null, 'Your rate for each job'),
+    el(
+      'p',
+      { class: 'hint', id: 'venue-rates-hint' },
+      'Check this against your paystub; rates can differ per person.',
+    ),
+    rows,
+  );
+  card.validate = () => {
+    fields.forEach(({ fr, rt, t }) =>
+      fr.setError(moneyTypo(rt.value) || (num(t.rate) > 0 ? '' : 'Enter the rate from your stub.')),
+    );
+    return fields.every(({ rt, t }) => !moneyTypo(rt.value) && num(t.rate) > 0);
+  };
+  card.firstInvalid = () => {
+    const f = fields.find(({ rt }) => rt.getAttribute('aria-invalid') === 'true');
+    return f ? f.rt : null;
+  };
+  return card;
+}
+
 /* ============ guided flow ============ */
 function guided(root, ctx) {
   const S = ctx.S,
     w = ctx.w;
   const first = isFirstWorkplace(S, w);
   const many = S.workplaces.length > 1;
-  const names = ['Pay period and gross', 'Deductions', 'Pay and tip-out'];
+  // TipNet Teams: set up from a venue code = one short step (the venue filled in the schedule, jobs and tip-outs)
+  const short = venueShortFor === w.id && !!w.venue && guidedFor === w.id && guidedStep === 0;
+  const names = short
+    ? ['Your rates and paystub']
+    : ['Pay period and gross', 'Deductions', 'Pay and tip-out'];
   // The first setup on this device may get a "home screen" step: first on iPhone/iPad Safari (it keeps separate data from the
   // home-screen app, so setup belongs there), last where the browser can install (see install.js). Never for a 2nd place.
   const homeKind = first && !many ? installStepKind(S.settings) : null;
@@ -2491,6 +2626,18 @@ function guided(root, ctx) {
   );
   let body;
   if (pre) body = [iosFirstCard()];
+  else if (short)
+    body = [
+      venueSummaryCard(ctx, () => {
+        venueShortFor = null; // the normal steps, with the venue's values in
+        keepGuided(S);
+        bus.rerender();
+        window.scrollTo(0, 0);
+      }),
+      rateCheckCard(ctx),
+      periodCard(ctx, { title: 'From your paystub', paystubOnly: true }),
+      dedCard(ctx),
+    ];
   else if (guidedStep === 0) body = [periodCard(ctx)];
   else if (guidedStep === 1) body = [dedCard(ctx)];
   else body = [payCard(ctx), tipoutCard(ctx)];
@@ -2512,7 +2659,11 @@ function guided(root, ctx) {
         )
       : null;
   const gapNote = el('p', { class: 'field-error', role: 'alert', hidden: true });
-  const next = el('button', { type: 'button', class: 'btn' }, guidedStep === 2 ? 'Finish setup' : 'Next');
+  const next = el(
+    'button',
+    { type: 'button', class: 'btn' },
+    short || guidedStep === 2 ? 'Finish setup' : 'Next',
+  );
   next.hidden = pre;
   next.addEventListener('click', () => {
     if (pre) return;
@@ -2530,7 +2681,7 @@ function guided(root, ctx) {
     // Every required value of the steps so far, not only the one on screen: a guided setup saved by an older version
     // can resume past a step that now asks for more (v37 had no shift count). The person goes to the first one missing.
     const gap = guidedGap(ctx.p, ctx.blank ? noDeductions : !!(ctx.draft || ctx.w).noDeductions);
-    if (gap === guidedStep) {
+    if (gap === guidedStep || (short && gap >= 0)) {
       // this very step still has a value that is not allowed: stay here and say so
       gapNote.textContent =
         'Something on this step still needs fixing before you can go on. Check the amounts above.';
@@ -2545,7 +2696,7 @@ function guided(root, ctx) {
       window.scrollTo(0, 0);
       return;
     }
-    if (guidedStep < 2) {
+    if (!short && guidedStep < 2) {
       guidedStep++;
       keepGuided(S);
       bus.rerender();
@@ -2578,6 +2729,7 @@ function guided(root, ctx) {
     }
     if (noDeductions) w.noDeductions = true;
     noDeductions = false;
+    venueShortFor = null;
     w.setupDone = true;
     delete w.guideSkipped;
     delete S.settings.guidedDraft;
@@ -2627,6 +2779,7 @@ function guided(root, ctx) {
         guidedFor = null;
         gProfile = null;
         noDeductions = false;
+        venueShortFor = null;
         guidedStep = 0;
         save();
         bus.rerender();
@@ -2762,7 +2915,9 @@ function guided(root, ctx) {
         el(
           'p',
           { class: 'hint' },
-          (names.length === 4 ? 'Four' : 'Three') + ' short steps. You can change any of it later.',
+          short
+            ? 'One short step. You can change any of it later.'
+            : (names.length === 4 ? 'Four' : 'Three') + ' short steps. You can change any of it later.',
         ),
       ),
       steps,
