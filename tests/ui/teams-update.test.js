@@ -86,6 +86,14 @@ test('matched by id after the manager renamed the job, and the worker keeps thei
     assert.match(text(page), /Bar staff · \$13\.00\/h/);
     assert.match(page.text(page.$('#upd-keeps-0')), /Stays “Bartender” at your rate/);
     assert.match(page.text(page.$('#upd-rates-0')), /The Corner Bar: \$13\.00\/h · yours: \$14\.00\/h/);
+    // the words follow the choice: the venue's rate, then back to mine
+    page.click(page.byText('#upd-job-0 button', 'Use The Corner Bar’s'));
+    assert.match(
+      page.text(page.$('#upd-keeps-0')),
+      /Stays “Bartender”, at The Corner Bar’s rate \(\$13\.00\/h\)/,
+    );
+    page.click(page.byText('#upd-job-0 button', 'Keep mine'));
+    assert.match(page.text(page.$('#upd-keeps-0')), /Stays “Bartender” at your rate/);
     page.click(page.$('#join-update'));
     await page.settle();
     const pay = jobs(page);

@@ -73,10 +73,9 @@ function updatePanel(S, w, v, isBlocked) {
     el(
       'p',
       { class: 'note', id: 'join-update-note' },
-      'You already set up ' +
-        w.name +
-        ' from ' +
-        w.venue.name +
+      (w.name === w.venue.name
+        ? 'You already joined ' + w.name
+        : 'You already set up ' + w.name + ' from ' + w.venue.name) +
         '. Here is what would change. Nothing changes until you tap Apply these changes. Your pay schedule, paystub numbers and other pay stay, and pay periods that have ended keep the pay they were saved with.',
     ),
   );
@@ -108,7 +107,9 @@ function updatePanel(S, w, v, isBlocked) {
           { class: 'note', id: 'upd-keeps-' + i },
           'Stays “' +
             payLabel(m) +
-            '” at your rate' +
+            (j.useVenue
+              ? '”, at ' + venueName + '’s rate (' + rateText(j.vjob.rate / 100, j.vjob.unit) + ')'
+              : '” at your rate') +
             (j.link ? ', linked to ' + venueName + '’s job' : '') +
             '.',
         ),
