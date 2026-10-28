@@ -156,3 +156,15 @@ test('a person whose role is a venue job: the tip sheet carries the job, and it 
     await page.close();
   }
 });
+
+test('ids never grow past 4 characters: after j999 the smallest free number is used', async () => {
+  const { newRowId } = await import('../../app/js/ui/team.js');
+  const page = await boot({ seed: realState((S) => (S.settings.team = { jSeq: 998 })), url: DEV });
+  try {
+    assert.equal(newRowId('j', []), 'j999');
+    assert.equal(newRowId('j', ['j1', 'j2']), 'j3', 'all 999 went by: the smallest free one');
+    assert.ok(/^[a-z0-9]{1,4}$/.test(newRowId('j', ['j1', 'j2', 'j3'])));
+  } finally {
+    await page.close();
+  }
+});

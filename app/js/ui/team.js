@@ -108,8 +108,9 @@ export function newRowId(prefix, used) {
   const taken = new Set(used);
   let n = t[key] || 0;
   do n++;
-  while (taken.has(prefix + n) && n < 999);
-  if (taken.has(prefix + n)) {
+  while (n <= 999 && taken.has(prefix + n));
+  // never past 999: an id is at most 4 characters (j999), and a longer one would make the venue code unreadable
+  if (n > 999) {
     // all 999 numbers went by: take the smallest one that is free now
     n = 1;
     while (taken.has(prefix + n)) n++;
