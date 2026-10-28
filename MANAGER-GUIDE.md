@@ -17,6 +17,8 @@ As soon as the form is complete you get your code: a **link** (with **Copy** and
 
 What's in the code: the venue name, pay schedule, payday, jobs with rates, and tip-outs. What is not: anyone's gross pay, deductions, hours or name.
 
+Each job and each tip-out also gets a short ID of its own when you add its row (j1, j2... and t1, t2...). It stays when you rename the row, so a worker’s phone can tell a renamed job from a new one. The IDs are not shown; they only live in the code. (A job with a preset kind, like Bartender, is named by its kind; to call it something else, pick **Other job** and type the name. The ID stays.)
+
 Your venue gets a private ID the first time you make a code. It stays on your phone, so when you change a rate and make the code again it is still the same venue. Staff who already joined can update from the new code instead of setting up twice.
 
 You can also tap **Join this venue on this device** to set up your own TipNet with it.
@@ -30,7 +32,7 @@ Under your code, tap **Print the poster**. It prints the venue name, a big QR co
 1. Open **Teams**, then **Tip pool**.
 2. Type your venue name (it goes on the sheet) and pick the **night**.
 3. Type the **pooled credit card tips** and **pooled cash tips**. Either can be 0.
-4. Add everyone who worked: **name** (24 characters at most), **role**, and **hours** (8, 7.5, 7:30 or 45 min all work). Names, roles and points are remembered for next time. Hours are not: you type them each night.
+4. Add everyone who worked: **name** (24 characters at most), **role**, and **hours** (8, 7.5, 7:30 or 45 min all work). Names, roles and points are remembered for next time. Hours are not: you type them each night. Pick one of your venue’s jobs as the role (the suggestions are your jobs from the Venue code tab) and the sheet carries that job, so each person’s hours land on the right job on their phone. If you rename the job later, their role follows it.
 5. Pick how to split:
    - **By hours**: each person's share of the hours worked.
    - **By points × hours**: hours times points, for example 2 points for a bartender and 1 for a runner.
@@ -47,7 +49,7 @@ Tell your staff to open only venue and tip sheet links that come from you.
 
 Under the tip sheet, tap **Share as a link or QR**. TipNet shows **"Anyone with this link or QR sees everyone's share."** before the link, because the sheet has every name and amount in it. Only share it with your team.
 
-Staff open the link, pick their name, and TipNet opens **Tonight** for that date with their credit card tips, cash tips and hours already filled in and tip-outs unticked (the pool was already split). They look it over and tap **Save night**. Nothing is saved for them until they do.
+Staff open the link, pick their name, and TipNet opens **Tonight** for that date with their credit card tips, cash tips and hours already filled in (on their matching job when you picked a venue job as their role, else on their main job) and tip-outs unticked (the pool was already split). They look it over and tap **Save night**. Nothing is saved for them until they do.
 
 A sheet holds up to 50 people. If you try to add more, TipNet says so: make a second sheet. A very full sheet (long names, many people) can also be too big to share as one link; TipNet says so: **split the staff into two sheets** and share each one. Printing still works. If it fits a link but not a QR code, you get the link only, with a note.
 
@@ -59,4 +61,5 @@ When a staff member who joined your venue keeps a TipNet Budget subscription, yo
 
 - TipNet gives estimates, not tax or payroll advice. The tip sheet only does the arithmetic of your pool. Check it against your own policy and your local rules on tip pooling.
 - Staff set up with your code, but they still type their own paystub numbers (gross pay, deductions, shifts). Their take-home is theirs alone.
-- If you change the pay schedule, jobs or tip-outs, make the code again and share the new link. Staff update their jobs and tip-outs from it. Pay periods that have already ended keep the pay they were saved with.
+- If you change the pay schedule, jobs or tip-outs, make the code again and share the new link. Staff see what would change on their phone and choose **Apply these changes**; nothing changes until they do. A renamed job still lines up with theirs, and each worker keeps their own name and their own hourly rate for it (rates differ per person; your rate is only the start). Tip-outs follow your list. Pay periods that have already ended keep the pay they were saved with.
+- Setting up after joining is one short step for staff: your pay schedule, payday, jobs and tip-outs come from the code, and they check their own rate and type their paystub numbers.

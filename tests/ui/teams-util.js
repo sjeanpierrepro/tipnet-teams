@@ -27,6 +27,12 @@ export function venue(over = {}) {
     ...over,
   };
 }
+/** The same venue as a version 2 code: a stable id on every job (j1, j2...) and tip-out (t1, t2...). */
+export const withIds = (v = venue()) => ({
+  ...v,
+  jobs: v.jobs.map((j, i) => ({ id: 'j' + (i + 1), ...j })),
+  tipouts: v.tipouts.map((t, i) => ({ id: 't' + (i + 1), ...t })),
+});
 export const joinUrl = (v = venue()) => 'http://localhost/#join=' + encodeVenue(v);
 
 /** A tip sheet dated yesterday (always inside the dates Tonight accepts). */

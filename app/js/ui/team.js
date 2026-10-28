@@ -750,6 +750,13 @@ function poolSection(S) {
   const venueRoles = (t.venue ? t.venue.jobs.map((j) => j.name) : []).concat(
     (t.venue ? t.venue.tipouts : []).map((x) => x.who),
   );
+  // rows already open follow a venue job renamed since (the id is the job; the role is its name now), and let go of one removed
+  P.rows.forEach((r) => {
+    if (!r.vj) return;
+    const job = venueJobs().find((j) => j.id === r.vj);
+    if (job) r.role = job.name;
+    else delete r.vj;
+  });
   const resultHost = el('div', { class: 'stack', id: 'pool-result', 'aria-live': 'polite' });
   const rowsHost = el('div', { class: 'stack', id: 'pool-rows' });
   const sharesHost = el('div', { class: 'stack', id: 'pool-shares' });
