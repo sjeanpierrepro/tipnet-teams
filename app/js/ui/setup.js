@@ -2050,6 +2050,59 @@ const jobsAt = (w) => (w.profile.payTypes || []).filter((t, i) => payKind(t, i) 
 export function venueUpdatePlan(w, v, choices = {}) {
   return planVenueUpdate(v, jobsAt(w), tipoutSetup(w.profile).list, choices);
 }
+/**
+ * The pay types establishment w would have after Apply (nothing is changed): the same steps updateFromVenue takes, so
+ * the preview can say exactly what happens. A job taken out that a saved night used comes back retired, or, when a new
+ * venue job is the same job (same kind or name, same unit), as that job: the old id with the new name and rate.
+ */
+export function venueUpdateResult(S, w, v, choices = {}) {
+  const payBefore = copyOf(w.profile.payTypes || []);
+  const isJob = (t, i) => payKind(t, i) === 'job' && !isRetired(t);
+  return keepUsedPay(
+    payBefore,
+    applyVenueUpdate(v, payBefore, isJob, choices),
+    S.nightsExample ? [] : nightsOf(S, w.id),
+  );
+}
+/**
+ * What happens to each of the worker's jobs they chose to remove, from the real result: {id: {how, as?}} with how
+ * 'gone' (taken out), 'retired' (out of the list, kept on the saved nights that used it) or 'replaced' (a saved
+ * night used it and a new venue job is the same job, so it carries on as that job: as is the job after Apply). Also
+ * mergedInto: venue job index -> the worker's job id it takes the place of.
+ */
+export function venueRemoveOutcome(S, w, v, choices = {}) {
+  const plan = planVenueUpdate(v, jobsAt(w), [], choices);
+  const before = w.profile.payTypes || [];
+  const payBefore = copyOf(before);
+  const isJob = (t, i) => payKind(t, i) === 'job' && !isRetired(t);
+  const applied = applyVenueUpdate(v, payBefore, isJob, choices);
+  const result = venueUpdateResult(S, w, v, choices);
+  const had = new Set(before.map((t) => String(t.id)));
+  // the new venue jobs, in the order applyVenueUpdate made them, paired with their venue job index
+  const fresh = applied.filter((t) => !had.has(String(t.id)));
+  const newIdx = plan.jobs.filter((j) => !j.matchId).map((j) => j.index);
+  const out = {};
+  const mergedInto = {};
+  plan.remove.forEach((id) => {
+    const r = result.find((t) => String(t.id) === String(id));
+    if (!r) out[id] = { how: 'gone' };
+    else if (isRetired(r)) out[id] = { how: 'retired' };
+    else {
+      out[id] = { how: 'replaced', as: r };
+      // the new venue job that took its place: gone from the result under its own id, its values now on this id
+      fresh.forEach((t, k) => {
+        const merged =
+          !result.some((x) => String(x.id) === String(t.id)) &&
+          r.name === t.name &&
+          r.rate === t.rate &&
+          r.unit === t.unit &&
+          r.vj === t.vj;
+        if (merged && newIdx[k] !== undefined) mergedInto[newIdx[k]] = id;
+      });
+    }
+  });
+  return { removed: out, mergedInto };
+}
 /** The worker's jobs at w, for the "Same as my job" pick lists: [{id, name, rate, unit}]. */
 export const venueJobChoices = (w) => jobsAt(w);
 /**
@@ -2064,13 +2117,7 @@ export function updateFromVenue(S, w, v, choices = {}) {
   lockFinished();
   const live = w.profile;
   const peopleBefore = copyOf(tipoutSetup(live).list);
-  const payBefore = copyOf(live.payTypes || []);
-  const isJob = (t, i) => payKind(t, i) === 'job' && !isRetired(t);
-  live.payTypes = keepUsedPay(
-    payBefore,
-    applyVenueUpdate(v, payBefore, isJob, choices),
-    S.nightsExample ? [] : nightsOf(S, w.id),
-  );
+  live.payTypes = venueUpdateResult(S, w, v, choices); // the same result the preview describes
   const to = venueTipouts(v, peopleBefore);
   live.tipouts = to.list;
   live.tipout = savedTipout(to.on, to.list);

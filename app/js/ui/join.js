@@ -23,6 +23,7 @@ import {
   addVenueEstablishment,
   updateFromVenue,
   venueUpdatePlan,
+  venueRemoveOutcome,
   venueJobChoices,
   limitLine,
   joinBlocked,
@@ -66,7 +67,10 @@ function radioGroup(labelText, items, current, onPick, key) {
  */
 function updatePanel(S, w, v, isBlocked) {
   const plan = venueUpdatePlan(w, v, { ...rev });
+  // what Apply really does to the jobs the worker removes (from the same steps Apply takes), so the words match it
+  const outcome = venueRemoveOutcome(S, w, v, { ...rev });
   const mine = venueJobChoices(w);
+  const replacedNotes = []; // {i, note, t}: lines that name the new job's rate, kept in step with its rate box
   const venueName = v.name;
   const kids = [];
   kids.push(
@@ -148,31 +152,67 @@ function updatePanel(S, w, v, isBlocked) {
       );
       rt.addEventListener('input', () => {
         rev.newRate[i] = rt.value;
+        replacedNotes.forEach((r) => r.i === i && (r.note.textContent = replacedText(r.t, i)));
       });
       rateBoxes.push({ rt, fr, i, j });
+      const into = outcome.mergedInto[i];
+      const old = into !== undefined ? mine.find((t) => t.id === into) : null;
       block.push(
         el(
           'p',
           { class: 'note', id: 'upd-new-note-' + i },
-          'New job: added to your list. You can change its rate.',
+          old
+            ? 'Takes the place of your ' + payLabel(old) + ' (see below). You can change its rate.'
+            : 'New job: added to your list. You can change its rate.',
         ),
         fr,
       );
     }
     kids.push(el('section', { class: 'card stack', id: 'upd-job-' + i }, block));
   });
+  // a removed job that a saved night used and a new venue job is the same job: it carries on as that job
+  const rateOf = (i) => {
+    const box = rateBoxes.find((b) => b.i === i);
+    const n = box ? readMoney(box.rt.value) : null;
+    return n > 0 ? n : null;
+  };
+  function replacedText(t, i) {
+    const as = outcome.removed[t.id].as;
+    const r = rateOf(i);
+    return (
+      'Your ' +
+      payLabel(t) +
+      ' becomes ' +
+      venueName +
+      '’s ' +
+      payLabel(as) +
+      (r ? ' at ' + rateText(r, as.unit) : '') +
+      '; this pay period’s nights on it follow the new rate.'
+    );
+  }
+  const fate = (t) => {
+    const o = outcome.removed[t.id];
+    if (!o) return 'kept';
+    if (o.how === 'retired') return 'will be removed from your list; nights you saved with it keep it';
+    return 'will be removed';
+  };
   // the worker's jobs the venue doesn't list
   if (plan.kept.length) {
     const main = mine[0];
     const rows = plan.kept.map((t) => {
       const gone = plan.remove.has(t.id);
-      const row = [
-        el(
-          'p',
-          { class: 'note', id: 'upd-kept-' + t.id },
-          'Not in ' + venueName + '’s list: ' + payLabel(t) + ' — ' + (gone ? 'will be removed' : 'kept'),
-        ),
-      ];
+      const o = outcome.removed[t.id];
+      const replacedBy =
+        o && o.how === 'replaced'
+          ? Object.keys(outcome.mergedInto).find((k) => outcome.mergedInto[k] === t.id)
+          : undefined;
+      const note = el('p', { class: 'note', id: 'upd-kept-' + t.id });
+      if (o && o.how === 'replaced') {
+        const i = replacedBy === undefined ? -1 : Number(replacedBy);
+        replacedNotes.push({ i, note, t });
+        note.textContent = replacedText(t, i);
+      } else note.textContent = 'Not in ' + venueName + '’s list: ' + payLabel(t) + ' — ' + fate(t);
+      const row = [note];
       if (t !== main) {
         const box = el('input', {
           type: 'checkbox',
@@ -187,14 +227,7 @@ function updatePanel(S, w, v, isBlocked) {
       }
       return row;
     });
-    kids.push(
-      el(
-        'section',
-        { class: 'card stack', id: 'upd-kept' },
-        rows,
-        el('p', { class: 'hint' }, 'A job used on a saved night stays on that night, even if you remove it.'),
-      ),
-    );
+    kids.push(el('section', { class: 'card stack', id: 'upd-kept' }, rows));
   }
   // tip-outs: the venue's policy
   const to = plan.tipouts;

@@ -367,3 +367,65 @@ test('a version 1 venue code (no ids) still updates, by name', async () => {
     await page.close();
   }
 });
+
+test('"New job" plus Remove on the same job a saved night used: the preview says what Apply really does', async () => {
+  // the worker's own Door job (no venue id) was used this pay period; the venue's Door is the same job
+  const s = state((S, w) => {
+    w.profile.payTypes.splice(1, 1, {
+      id: 'p2',
+      k: 'otherjob',
+      name: 'Door',
+      rate: 18,
+      unit: 'shift',
+      usual: 0,
+    });
+    S.nights = [night(1, 5, { p1: 6, p2: 1 })];
+  });
+  const page = await boot({ seed: s, url: joinUrl(withIds()) });
+  try {
+    assert.equal(page.$('#upd-match-1').value, 'p2', 'matched by name at first');
+    pick(page, 'upd-match-1', 'new');
+    page.click(page.$('#upd-remove-p2'));
+    const note = () => page.text(page.$('#upd-kept-p2'));
+    assert.match(
+      note(),
+      /^Your Door becomes The Corner Bar’s Door at \$15\.00\/shift; this pay period’s nights on it follow the new rate\.$/,
+    );
+    assert.doesNotMatch(text(page), /will be removed|stays on that night/);
+    assert.match(page.text(page.$('#upd-new-note-1')), /Takes the place of your Door/);
+    // the rate box and the words stay in step
+    page.type(page.$('#upd-new-1'), '16');
+    assert.match(note(), /at \$16\.00\/shift/);
+    page.click(page.$('#join-update'));
+    await page.settle();
+    // what was said is what happened: the same job (p2), the venue's Door at the rate typed, nothing retired
+    const door = jobs(page).filter((t) => t.name === 'Door');
+    assert.equal(door.length, 1);
+    assert.equal(door[0].id, 'p2');
+    assert.equal(door[0].rate, 16);
+    assert.equal(door[0].unit, 'shift');
+    assert.equal(door[0].retired, undefined);
+  } finally {
+    await page.close();
+  }
+});
+
+test('Remove on a job a saved night used, with nothing to take its place: kept on those nights, said so', async () => {
+  const s = state((S) => {
+    S.nights = [night(1, 5, { p1: 6, p2: 3 })];
+  });
+  const page = await boot({ seed: s, url: joinUrl(withIds()) });
+  try {
+    page.click(page.$('#upd-remove-p2'));
+    assert.match(
+      page.text(page.$('#upd-kept-p2')),
+      /Private event — will be removed from your list; nights you saved with it keep it$/,
+    );
+    page.click(page.$('#join-update'));
+    await page.settle();
+    const p2 = jobs(page).find((t) => t.id === 'p2');
+    assert.ok(p2 && p2.retired, 'retired, as said');
+  } finally {
+    await page.close();
+  }
+});
