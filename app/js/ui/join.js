@@ -89,6 +89,8 @@ function updatePanel(S, w, v, isBlocked) {
     const m = j.mine;
     const pick = select([...mine.map((t) => [t.id, payLabel(t)]), ['new', 'New job']], j.matchId || 'new', {
       id: 'upd-match-' + i,
+      // every card has this box: its name says which venue job it is for
+      'aria-label': 'Same as my job, for ' + venueName + '’s ' + j.vjob.name,
     });
     pick.addEventListener('change', () => {
       const val = pick.value;

@@ -429,3 +429,19 @@ test('Remove on a job a saved night used, with nothing to take its place: kept o
     await page.close();
   }
 });
+
+test('each "Same as my job" box is named for its venue job', async () => {
+  const page = await boot({ seed: state(), url: joinUrl(withIds()) });
+  try {
+    assert.equal(
+      page.$('#upd-match-0').getAttribute('aria-label'),
+      'Same as my job, for The Corner Bar’s Bartender',
+    );
+    assert.equal(
+      page.$('#upd-match-1').getAttribute('aria-label'),
+      'Same as my job, for The Corner Bar’s Door',
+    );
+  } finally {
+    await page.close();
+  }
+});
